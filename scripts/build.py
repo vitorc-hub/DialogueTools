@@ -24,27 +24,28 @@ def build() -> Path:
     react_dom_js = read_safe_js(VENDOR / "react-dom.production.min.js")
     themes_css = (SRC / "themes.css").read_text(encoding="utf-8")
     styles_css = (SRC / "styles.css").read_text(encoding="utf-8")
-    presets_js = read_safe_js(SRC / "presets.js")
     editor_js = read_safe_js(SRC / "editor.js")
 
     html = (
         "<!DOCTYPE html>\n"
-        '<html lang="pt-BR" data-theme="turing_crt">\n'
+        '<html lang="pt-BR" data-theme="cozy_grove">\n'
         "<head>\n"
         '  <meta charset="UTF-8">\n'
         '  <meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        "  <title>DialogueTools · Editor Visual de Diálogos</title>\n"
+        "  <title>Dialogue Tool</title>\n"
+        '  <link rel="preconnect" href="https://fonts.googleapis.com">\n'
+        '  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n'
+        '  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">\n'
         f"  <style>\n{vt323_css}\n  </style>\n"
         f"  <script>\n{tailwind_js}\n  </script>\n"
-        '  <script>tailwind.config = { theme: { extend: { fontFamily: { mono: ["VT323", "ui-monospace", "monospace"] } } } };</script>\n'
+        '  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"], mono: ["JetBrains Mono", "VT323", "ui-monospace", "monospace"] } } } };</script>\n'
         f"  <script>\n{react_js}\n  </script>\n"
         f"  <script>\n{react_dom_js}\n  </script>\n"
         "</head>\n"
-        '<body class="crt">\n'
-        f"  <style id=\"dtools-themes\">\n{themes_css}\n  </style>\n"
-        f"  <style id=\"dtools-styles\">\n{styles_css}\n  </style>\n"
+        "<body>\n"
+        f'  <style id="dtools-themes">\n{themes_css}\n  </style>\n'
+        f'  <style id="dtools-styles">\n{styles_css}\n  </style>\n'
         '  <div id="root"></div>\n'
-        f"  <script>\n{presets_js}\n  </script>\n"
         f"  <script>\n{editor_js}\n  </script>\n"
         "</body>\n"
         "</html>\n"

@@ -2,36 +2,83 @@ const h = React.createElement;
 const { useState, useRef, useLayoutEffect, useEffect } = React;
 
 /* ==========================================================================
-   ARMAZENAMENTO ISOLADO POR JOGO (NUNCA MISTURA PROJETOS)
+   ARMAZENAMENTO ISOLADO POR PAPO / PROJETO
    ========================================================================== */
-const K_INDEX = "dtools-games-index-v2";
-const K_GAME_PREFIX = "dtools-game-v2:";
-const K_GOOD_PREFIX = "dtools-game-good-v2:";
-const TURING_OFFICIAL_ID = "turing_test_oficial";
+const K_INDEX = "dtools-games-index-v3";
+const K_THEME_PREF = "dtools-theme-pref-v2";
+const K_GAME_PREFIX = "dtools-game-v3:";
+const K_GOOD_PREFIX = "dtools-game-good-v3:";
+const DEFAULT_THEME = "cozy_grove";
 
 const lsGet = k => { try { return localStorage.getItem(k); } catch (e) { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); return true; } catch (e) { return false; } };
 const lsDel = k => { try { localStorage.removeItem(k); } catch (e) {} };
 
 /* ==========================================================================
-   TEMAS VISUAIS INSPIRADORES
+   TEMAS VISUAIS (SEM EMOJIS POLUINDO, NOMES LIMPOS)
    ========================================================================== */
 const THEMES = [
-  { id: "turing_crt", label: "🖥️ Terminal RASEC (CRT)", desc: "Fósforo verde sobre preto, scanlines e estética retro-terminal." },
-  { id: "quill_tree", label: "🪶 QuillTree (Manuscrito)", desc: "Pergaminho aquecido, tinta sépia e tipografia literária." },
-  { id: "ink_bw", label: "✒️ Ink B&W (Nanquim P&B)", desc: "Alto contraste monocromático estilo quadrinho / graphic novel." },
-  { id: "crimson_crime", label: "🩸 Crimson Crime (Noir)", desc: "Mural investigativo noturno com fios vermelhos e clima noir." },
-  { id: "synthwave", label: "🌆 Synthwave (Outrun)", desc: "Horizonte neon anos 80 em magenta, violeta e ciano." },
-  { id: "cyberpunk", label: "⚡ Cyberpunk (Night City)", desc: "Asfalto escuro, amarelo ácido e implantes ciano." },
-  { id: "eerie", label: "🌫️ Eerie Atmosphere", desc: "Névoa fria, verde-espectro e tensão de terror psicológico." },
-  { id: "dungeon", label: "🐉 Dungeon Crawler", desc: "Pedra de masmorra, bronze forjado e luz de tocha." },
-  { id: "shoot_dash", label: "🚀 Shoot & Dash (Arcade)", desc: "Azul elétrico, laranja turbo e adrenalina de fliperama." },
-  { id: "cozy_grove", label: "🍵 Cozy Matcha (Lo-Fi)", desc: "Paleta suave de chá-verde e pêssego para escritas longas." }
+  { id: "cozy_grove", label: "Cozy Lo-Fi (Padrão)" },
+  { id: "bw_terminal", label: "Terminal B&W (Preto & Branco)" },
+  { id: "crimson_crime", label: "Crimson Crime" },
+  { id: "spacehead", label: "Spacehead" },
+  { id: "static_dither", label: "Static Dither (1-Bit)" },
+  { id: "turing_crt", label: "Terminal RASEC (CRT)" },
+  { id: "quill_tree", label: "QuillTree (Manuscrito)" },
+  { id: "ink_bw", label: "Ink Paper (Claro P&B)" },
+  { id: "synthwave", label: "Synthwave" },
+  { id: "cyberpunk", label: "Cyberpunk" },
+  { id: "eerie", label: "Eerie Atmosphere" },
+  { id: "dungeon", label: "Dungeon Crawler" },
+  { id: "shoot_dash", label: "Shoot & Dash" }
 ];
 const THEME_IDS = THEMES.map(t => t.id);
 
 /* ==========================================================================
-   HELPERS GERAIS E CORES DE ESTADOS
+   ÍCONES VETORIAIS EXCLUSIVOS DO SITE (SVG MINIMALISTA, HERDA COR DO TEMA)
+   ========================================================================== */
+const SVG_PATHS = {
+  logo: [
+    ["circle", { cx: 4, cy: 12, r: 2.2 }],
+    ["circle", { cx: 19, cy: 6, r: 2.2 }],
+    ["circle", { cx: 19, cy: 18, r: 2.2 }],
+    ["path", { d: "M6.4 12h4.6c2 0 2.5-6 5.6-6M11 12c2 0 2.5 6 5.6 6" }]
+  ],
+  play: [["polygon", { points: "6,4 20,12 6,20", fill: "currentColor", stroke: "none" }]],
+  plus: [["path", { d: "M12 5v14M5 12h14" }]],
+  minus: [["path", { d: "M5 12h14" }]],
+  folder: [["path", { d: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" }]],
+  download: [["path", { d: "M12 4v11m0 0l-4-4m4 4l4-4M4 19h16" }]],
+  edit: [["path", { d: "M15.5 4.5l4 4L8 20H4v-4L15.5 4.5z" }]],
+  trash: [["path", { d: "M4 7h16M9 7V4h6v3m-7 3v7m4-7v7m4-7v7M6 7l1 13h10l1-13" }]],
+  close: [["path", { d: "M6 6l12 12M18 6L6 18" }]],
+  branch: [["path", { d: "M5 12h6l4-5h4M11 12l4 5h4M17 5l2 2-2 2M17 15l2 2-2 2" }]],
+  sliders: [["path", { d: "M4 7h9m4 0h3M13 5v4M4 17h3m4 0h9M7 15v4" }]],
+  back: [["path", { d: "M19 12H5m0 0l5-5m-5 5l5 5" }]],
+  arrow: [["path", { d: "M5 12h14m-5-5l5 5-5 5" }]],
+  check: [["path", { d: "M5 12.5l4.5 4.5L19 7.5" }]],
+  alert: [["path", { d: "M12 3L2.5 20h19L12 3zm0 6v5m0 3.5h.01" }]]
+};
+
+function Icon({ name, size }) {
+  const s = size || 15;
+  const shapes = SVG_PATHS[name] || [];
+  return h("svg", {
+    width: s,
+    height: s,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+    "aria-hidden": "true",
+    style: { flexShrink: 0 }
+  }, shapes.map(([tag, attrs], i) => h(tag, { key: i, ...attrs })));
+}
+
+/* ==========================================================================
+   HELPERS GERAIS E MAPEAMENTO DE TONS
    ========================================================================== */
 const S = v => (typeof v === "string" ? v : v == null ? "" : String(v));
 const A = v => (Array.isArray(v) ? v : []);
@@ -40,14 +87,15 @@ const clone = o => JSON.parse(JSON.stringify(o));
 
 const slug = t => S(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "");
 const stateKey = t => S(t).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9_]+/g, "_").replace(/^_+|_+$/g, "") || "Estado";
-const uid = prefix => (prefix || "jogo") + "_" + Math.random().toString(36).slice(2, 7);
+const uid = prefix => (prefix || "papo") + "_" + Math.random().toString(36).slice(2, 7);
+const stripLeadingEmoji = s => S(s).replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F\s]+/u, "").trim() || S(s).trim();
 
 const TONE_MAP = {
-  g: { label: "Verde / Positivo", t: "text-emerald-400", b: "border-emerald-400", bg: "bg-emerald-950/40" },
-  a: { label: "Âmbar / Neutro", t: "text-amber-400", b: "border-amber-400", bg: "bg-amber-950/40" },
-  r: { label: "Vermelho / Tensão", t: "text-rose-500", b: "border-rose-500", bg: "bg-rose-950/40" },
-  c: { label: "Ciano / Pista", t: "text-cyan-400", b: "border-cyan-400", bg: "bg-cyan-950/40" },
-  p: { label: "Roxo / Especial", t: "text-purple-400", b: "border-purple-400", bg: "bg-zinc-900" }
+  g: { label: "Primária (Destaque)", textCls: "fg-pri", boxCls: "tone-box-g", btnKind: "pri" },
+  a: { label: "Secundária (Âmbar)", textCls: "fg-sec", boxCls: "tone-box-a", btnKind: "sec" },
+  r: { label: "Alerta / Tensão", textCls: "fg-danger", boxCls: "tone-box-r", btnKind: "danger" },
+  c: { label: "Informação / Ciano", textCls: "fg-info", boxCls: "tone-box-c", btnKind: "info" },
+  p: { label: "Especial / Condicional", textCls: "fg-spec", boxCls: "tone-box-p", btnKind: "spec" }
 };
 const TONE_KEYS = Object.keys(TONE_MAP);
 
@@ -67,133 +115,172 @@ const isPlaceholderFala = raw => {
 };
 
 /* ==========================================================================
-   TEMPLATES DE JOGO (TURINGTEST + JOGO LIVRE + RPG + NOIR)
+   SISTEMA CONDICIONAL "IF"
    ========================================================================== */
+const COND_TYPES = [
+  ["npc_natureza", "Natureza do NPC (IA / Humano)"],
+  ["visao_atual", "Final / Estado Atual"],
+  ["possui_item", "Possui Item / Evidência"],
+  ["ferramenta_usada", "Aba Especial Usada"],
+  ["desconfianca", "Métrica Global (> / ==)"],
+  ["custom", "Condição Livre (Expressão)"]
+];
+const COND_TYPE_KEYS = COND_TYPES.map(x => x[0]);
+const NUM_OPS = [">=", "<=", "==", "!=", ">", "<"];
+
+function defaultCond() {
+  return { tipo: "npc_natureza", op: "==", valor: "Sintético" };
+}
+
+function normCond(c) {
+  if (!c || typeof c !== "object") return defaultCond();
+  const tipo = oneOf(c.tipo, COND_TYPE_KEYS, "npc_natureza");
+  let op = S(c.op).trim() || "==";
+  let valor = S(c.valor).trim();
+  if (tipo === "npc_natureza") {
+    op = oneOf(op, ["==", "!="], "==");
+    valor = oneOf(valor, ["Sintético", "Humano"], "Sintético");
+  } else if (tipo === "visao_atual") {
+    op = oneOf(op, ["==", "!="], "==");
+  } else if (tipo === "possui_item") {
+    op = oneOf(op, ["==", "!="], "==");
+  } else if (tipo === "ferramenta_usada") {
+    op = oneOf(op, ["==", "!="], "==");
+    if (!valor) valor = "vies";
+  } else if (tipo === "desconfianca") {
+    op = oneOf(op, NUM_OPS, ">=");
+    valor = String(Math.max(0, Math.floor(+valor || 1)));
+  }
+  return { tipo, op, valor };
+}
+
+function condHumanLabel(c) {
+  const nc = normCond(c);
+  if (nc.tipo === "npc_natureza") return "NPC " + nc.op + " " + (nc.valor === "Sintético" ? "IA / Sintético" : "Humano");
+  if (nc.tipo === "visao_atual") return "Estado " + nc.op + " " + (nc.valor || "(estado)");
+  if (nc.tipo === "possui_item") return (nc.op === "!=" ? "Sem " : "Tem ") + (nc.valor || "(item)");
+  if (nc.tipo === "ferramenta_usada") return "Aba Especial " + nc.op + " " + nc.valor;
+  if (nc.tipo === "desconfianca") return "Métrica " + nc.op + " " + nc.valor;
+  return nc.valor || "(condição livre)";
+}
+
+function condTxtExpr(c) {
+  const nc = normCond(c);
+  if (nc.tipo === "npc_natureza") return "NPC_NATUREZA " + nc.op + " " + nc.valor;
+  if (nc.tipo === "visao_atual") return "VISAO " + nc.op + " " + (nc.valor || "NONE");
+  if (nc.tipo === "possui_item") return (nc.op === "!=" ? "!HAS_ITEM " : "HAS_ITEM ") + (nc.valor || "NONE");
+  if (nc.tipo === "ferramenta_usada") return "FERRAMENTA " + nc.op + " " + nc.valor;
+  if (nc.tipo === "desconfianca") return "DESCONFIANCA " + nc.op + " " + nc.valor;
+  return (nc.valor || "TRUE").replace(/\s*\n\s*/g, " ").trim();
+}
+
+function evalCondInSim(c, ctx) {
+  const nc = normCond(c);
+  if (nc.tipo === "npc_natureza") {
+    const eq = ctx.npcNatureza === nc.valor;
+    return nc.op === "!=" ? !eq : eq;
+  }
+  if (nc.tipo === "visao_atual") {
+    const eq = ctx.visao === nc.valor;
+    return nc.op === "!=" ? !eq : eq;
+  }
+  if (nc.tipo === "possui_item") {
+    const has = ctx.ownedEvs.has(nc.valor);
+    return nc.op === "!=" ? !has : has;
+  }
+  if (nc.tipo === "ferramenta_usada") {
+    let eq = false;
+    if (nc.valor === "qualquer") eq = ctx.ferramenta !== "nenhuma";
+    else eq = ctx.ferramenta.toLowerCase() === nc.valor.toLowerCase();
+    return nc.op === "!=" ? !eq : eq;
+  }
+  if (nc.tipo === "desconfianca") {
+    const a = ctx.desconf, b = +nc.valor || 0;
+    if (nc.op === ">=") return a >= b;
+    if (nc.op === "<=") return a <= b;
+    if (nc.op === "==") return a === b;
+    if (nc.op === "!=") return a !== b;
+    if (nc.op === ">") return a > b;
+    if (nc.op === "<") return a < b;
+  }
+  return !!ctx.customTrue;
+}
+
+/* ==========================================================================
+   CONFIGURAÇÃO FLEXÍVEL DE JOGO / PAPO
+   ========================================================================== */
+function buildScenesList(count, namingMode, aberturasDinamicas, usarVereditoMatriz) {
+  const n = Math.max(1, Math.min(24, Math.floor(+count || 1)));
+  const out = [];
+  for (let i = 1; i <= n; i++) {
+    let id = "D" + i;
+    let rotulo = "Dia " + i;
+    let grupo = "";
+    if (namingMode === "semanas") {
+      const sem = Math.ceil(i / 3);
+      grupo = "S" + sem;
+      rotulo = grupo + " · D" + i;
+    } else if (namingMode === "papo") {
+      id = "PAPO_" + i;
+      rotulo = "Papo " + i;
+    } else if (namingMode === "cena") {
+      id = "CENA_" + i;
+      rotulo = "Cena " + i;
+    }
+    const isEndOfCycle = namingMode === "semanas" ? (i % 3 === 0 || i === n) : (i === n);
+    out.push({
+      id,
+      rotulo,
+      grupo,
+      aberturas: !!(aberturasDinamicas && i > 1),
+      matriz: !!(usarVereditoMatriz && !isEndOfCycle && n > 1),
+      veredito: !!(usarVereditoMatriz && isEndOfCycle)
+    });
+  }
+  return out;
+}
+
 function makeTuringConfig(themeOverride) {
   return {
     template: "turing_test",
-    theme: themeOverride || "turing_crt",
+    theme: themeOverride || DEFAULT_THEME,
     modulos: {
       inventario: true,
       metrica_global: true,
       aberturas_dinamicas: true,
       matriz_transicao: true,
       veredito: true,
-      experimental: true,
+      experimental: false,
       export_turing_txt: true
     },
     termos: {
-      npc_singular: "Suspeito",
-      npc_plural: "Suspeitos",
+      npc_singular: "NPC",
+      npc_plural: "NPCs",
       item_a: "Objeto",
       item_a_prefix: "EV",
       item_b: "Informação",
       item_b_prefix: "INF",
-      metrica_nome: "Autodesconfiança Global",
-      metrica_icone: "👁"
+      metrica_nome: "Autodesconfiança Global"
     },
     estados_folha: [
       { nome: "Confiança", cor: "g" },
       { nome: "Dúvida", cor: "a" },
       { nome: "Pressão", cor: "r" }
     ],
-    cenas: [
-      { id: "D1", rotulo: "S1·D1", grupo: "S1", aberturas: false, matriz: true, veredito: false },
-      { id: "D2", rotulo: "S1·D2", grupo: "S1", aberturas: true, matriz: true, veredito: false },
-      { id: "D3", rotulo: "S1·D3", grupo: "S1", aberturas: true, matriz: false, veredito: true },
-      { id: "D4", rotulo: "S2·D4", grupo: "S2", aberturas: true, matriz: true, veredito: false },
-      { id: "D5", rotulo: "S2·D5", grupo: "S2", aberturas: true, matriz: true, veredito: false },
-      { id: "D6", rotulo: "S2·D6", grupo: "S2", aberturas: true, matriz: false, veredito: true }
-    ],
+    cenas: buildScenesList(6, "semanas", true, true),
     arvores_extras: [
-      { id: "VIES", rotulo: "🧪 VIÉS", cor: "p", sub: "Árvore única · Custo: 3 tokens · Jogador escolhe na Raiz ➔ ramo alternativo até Folha (visão prioritária)" },
-      { id: "INJECAO", rotulo: "⚡ INJEÇÃO", cor: "c", sub: "Árvore única · Custo: 4 tokens · Jogador escolhe na Raiz ➔ ramo alternativo até Folha (visão prioritária)" }
+      { id: "VIES", rotulo: "Viés", cor: "p", modo_raiz: "escolhas", sub: "Custo: 3 tokens · Jogador escolhe na Raiz e segue ramo alternativo até o Fim" },
+      { id: "INJECAO", rotulo: "Injeção", cor: "c", modo_raiz: "escolhas", sub: "Custo: 4 tokens · Jogador escolhe na Raiz e segue ramo alternativo até o Fim" }
     ]
   };
 }
 
-function makeTemplateConfig(tpl, themeOverride) {
-  if (tpl === "turing_test") return makeTuringConfig(themeOverride);
-  if (tpl === "rpg") {
-    return {
-      template: "rpg",
-      theme: themeOverride || "dungeon",
-      modulos: {
-        inventario: true,
-        metrica_global: true,
-        aberturas_dinamicas: false,
-        matriz_transicao: false,
-        veredito: false,
-        experimental: false,
-        export_turing_txt: false
-      },
-      termos: {
-        npc_singular: "NPC",
-        npc_plural: "NPCs",
-        item_a: "Item / Chave",
-        item_a_prefix: "ITEM",
-        item_b: "Pista / Lore",
-        item_b_prefix: "LORE",
-        metrica_nome: "Reputação / Karma",
-        metrica_icone: "⚜"
-      },
-      estados_folha: [
-        { nome: "Aliado", cor: "g" },
-        { nome: "Neutro", cor: "a" },
-        { nome: "Hostil", cor: "r" },
-        { nome: "Missão Aceita", cor: "c" }
-      ],
-      cenas: [
-        { id: "ENC_1", rotulo: "1º Encontro", grupo: "Ato 1", aberturas: false, matriz: false, veredito: false },
-        { id: "QUEST", rotulo: "Missão", grupo: "Ato 1", aberturas: false, matriz: false, veredito: false },
-        { id: "EPILOGO", rotulo: "Desfecho", grupo: "Ato 2", aberturas: true, matriz: false, veredito: false }
-      ],
-      arvores_extras: [
-        { id: "LOJA", rotulo: "🪙 MERCADOR", cor: "p", sub: "Diálogos opcionais de troca / rumores" }
-      ]
-    };
-  }
-  if (tpl === "crime") {
-    return {
-      template: "crime",
-      theme: themeOverride || "crimson_crime",
-      modulos: {
-        inventario: true,
-        metrica_global: true,
-        aberturas_dinamicas: true,
-        matriz_transicao: true,
-        veredito: true,
-        experimental: false,
-        export_turing_txt: false
-      },
-      termos: {
-        npc_singular: "Testemunha",
-        npc_plural: "Testemunhas",
-        item_a: "Prova Física",
-        item_a_prefix: "PROVA",
-        item_b: "Depoimento",
-        item_b_prefix: "DEP",
-        metrica_nome: "Tensão do Caso",
-        metrica_icone: "🩸"
-      },
-      estados_folha: [
-        { nome: "Cooperativo", cor: "g" },
-        { nome: "Evasivo", cor: "a" },
-        { nome: "Defensivo", cor: "r" }
-      ],
-      cenas: [
-        { id: "ATO_1", rotulo: "Abordagem", grupo: "Caso", aberturas: false, matriz: true, veredito: false },
-        { id: "ATO_2", rotulo: "Acareação", grupo: "Caso", aberturas: true, matriz: false, veredito: true }
-      ],
-      arvores_extras: []
-    };
-  }
-  // Default: Jogo Livre / Narrativo Geral
+function makeSimpleCleanConfig(themeOverride) {
   return {
     template: "livre",
-    theme: themeOverride || "quill_tree",
+    theme: themeOverride || DEFAULT_THEME,
     modulos: {
-      inventario: true,
+      inventario: false,
       metrica_global: false,
       aberturas_dinamicas: false,
       matriz_transicao: false,
@@ -202,41 +289,36 @@ function makeTemplateConfig(tpl, themeOverride) {
       export_turing_txt: false
     },
     termos: {
-      npc_singular: "Personagem",
-      npc_plural: "Personagens",
+      npc_singular: "NPC",
+      npc_plural: "NPCs",
       item_a: "Item",
       item_a_prefix: "IT",
-      item_b: "Flag / Info",
-      item_b_prefix: "FLAG",
-      metrica_nome: "Variável Global",
-      metrica_icone: "★"
+      item_b: "Informação",
+      item_b_prefix: "INF",
+      metrica_nome: "Variável Global"
     },
-    estados_folha: [
-      { nome: "Positivo", cor: "g" },
-      { nome: "Neutro", cor: "a" },
-      { nome: "Negativo", cor: "r" }
-    ],
-    cenas: [
-      { id: "CENA_1", rotulo: "Cena 1", grupo: "", aberturas: false, matriz: false, veredito: false },
-      { id: "CENA_2", rotulo: "Cena 2", grupo: "", aberturas: false, matriz: false, veredito: false }
-    ],
+    estados_folha: [],
+    cenas: buildScenesList(1, "papo", false, false),
     arvores_extras: []
   };
 }
 
 function normalizeConfig(rawCfg, isTuringHint) {
-  const base = isTuringHint || rawCfg?.template === "turing_test" ? makeTuringConfig() : makeTemplateConfig(rawCfg?.template || "livre");
+  const base = isTuringHint || !rawCfg || rawCfg?.template === "turing_test"
+    ? makeTuringConfig(rawCfg?.theme)
+    : makeSimpleCleanConfig(rawCfg?.theme);
   if (!rawCfg || typeof rawCfg !== "object") return base;
 
-  const estados = A(rawCfg.estados_folha)
-    .filter(x => x && S(x.nome).trim())
-    .map(x => ({ nome: S(x.nome).trim(), cor: oneOf(x.cor, TONE_KEYS, "a") }));
+  const hasExplicitEstados = Array.isArray(rawCfg.estados_folha);
+  const estados = hasExplicitEstados
+    ? rawCfg.estados_folha.filter(x => x && S(x.nome).trim()).map(x => ({ nome: S(x.nome).trim(), cor: oneOf(x.cor, TONE_KEYS, "a") }))
+    : base.estados_folha;
 
   const cenas = A(rawCfg.cenas)
     .filter(x => x && S(x.id).trim())
     .map(x => ({
       id: S(x.id).trim(),
-      rotulo: S(x.rotulo).trim() || S(x.id).trim(),
+      rotulo: stripLeadingEmoji(x.rotulo) || S(x.id).trim(),
       grupo: S(x.grupo).trim(),
       aberturas: !!x.aberturas,
       matriz: !!x.matriz,
@@ -247,8 +329,9 @@ function normalizeConfig(rawCfg, isTuringHint) {
     .filter(x => x && S(x.id).trim())
     .map(x => ({
       id: S(x.id).trim().toUpperCase(),
-      rotulo: S(x.rotulo).trim() || S(x.id).trim(),
+      rotulo: stripLeadingEmoji(x.rotulo) || S(x.id).trim(),
       cor: oneOf(x.cor, TONE_KEYS, "p"),
+      modo_raiz: oneOf(x.modo_raiz, ["escolhas", "fala"], "escolhas"),
       sub: S(x.sub)
     }));
 
@@ -264,21 +347,34 @@ function normalizeConfig(rawCfg, isTuringHint) {
       experimental: rawCfg.modulos?.experimental !== undefined ? !!rawCfg.modulos.experimental : base.modulos.experimental,
       export_turing_txt: rawCfg.modulos?.export_turing_txt !== undefined ? !!rawCfg.modulos.export_turing_txt : base.modulos.export_turing_txt
     },
-    termos: { ...base.termos, ...(rawCfg.termos || {}) },
-    estados_folha: estados.length ? estados : base.estados_folha,
+    termos: {
+      ...base.termos,
+      ...(rawCfg.termos || {}),
+      npc_singular: "NPC",
+      npc_plural: "NPCs"
+    },
+    estados_folha: estados,
     cenas: cenas.length ? cenas : base.cenas,
     arvores_extras: extras
   };
 }
 
 /* ==========================================================================
-   NORMALIZAÇÃO DE NÓS, ÁRVORES E NPCS
+   CONSTRUTORES E NORMALIZAÇÃO DE NÓS E NPCS
    ========================================================================== */
-const OP = (texto, proximo_no, efeito) => ({ texto: S(texto), proximo_no: S(proximo_no), efeito: S(efeito) });
+const OP = (texto, proximo_no, efeito, cond) => ({
+  texto: S(texto),
+  proximo_no: S(proximo_no),
+  efeito: S(efeito),
+  cond: cond ? normCond(cond) : null
+});
+
 const N = (id, rotulo, fala, opcoes, extra) => ({
   id: S(id),
   rotulo: S(rotulo),
   fala_npc: S(fala),
+  fala_condicional: [],
+  condicional: null,
   folha: null,
   opcoes: opcoes || [],
   desbloqueios: [],
@@ -288,11 +384,14 @@ const N = (id, rotulo, fala, opcoes, extra) => ({
   desconfianca: 0,
   ...(extra || {})
 });
+
 const L = (id, fala, visao, extra) => ({
   id: S(id),
   rotulo: "Final",
   fala_npc: S(fala),
-  folha: { visao_jogador: S(visao) || "Neutro" },
+  fala_condicional: [],
+  condicional: null,
+  folha: { visao_jogador: S(visao) },
   opcoes: [],
   desbloqueios: [],
   confronto_evidencia: null,
@@ -302,16 +401,37 @@ const L = (id, fala, visao, extra) => ({
   ...(extra || {})
 });
 
+const IFN = (id, cond, seVerdadeiro, seFalso, rotulo) => ({
+  id: S(id),
+  rotulo: S(rotulo) || "Desvio IF",
+  fala_npc: "",
+  fala_condicional: [],
+  condicional: {
+    cond: normCond(cond),
+    se_verdadeiro: S(seVerdadeiro),
+    se_falso: S(seFalso)
+  },
+  folha: null,
+  opcoes: [],
+  desbloqueios: [],
+  confronto_evidencia: null,
+  evidencia_desbloqueada: "",
+  trava_rota_secreta: "",
+  desconfianca: 0
+});
+
 function stateTone(cfg, visaoNome) {
+  if (!A(cfg?.estados_folha).length) return TONE_MAP.g;
   const found = A(cfg?.estados_folha).find(e => e.nome === visaoNome);
   return TONE_MAP[found?.cor || "a"] || TONE_MAP.a;
 }
 
 function defaultLeafName(cfg) {
   const est = A(cfg?.estados_folha);
+  if (!est.length) return "";
   if (est.some(e => e.nome === "Dúvida")) return "Dúvida";
   if (est.some(e => e.nome === "Neutro")) return "Neutro";
-  return est[0]?.nome || "Final";
+  return est[0].nome;
 }
 
 function matrixKeysFor(cfg) {
@@ -337,6 +457,7 @@ function normTree(list, fb, isScene, hasAberturas, cfg) {
 
   const validStates = A(cfg.estados_folha).map(e => e.nome);
   const defState = defaultLeafName(cfg);
+  const canUseAb = !!(isScene && hasAberturas && validStates.length > 0);
   const used = new Set();
 
   const nos = base.map((n, i) => {
@@ -348,17 +469,29 @@ function normTree(list, fb, isScene, hasAberturas, cfg) {
     }
     used.add(id);
 
+    const condicional = i > 0 && n?.condicional && typeof n.condicional === "object"
+      ? {
+          cond: normCond(n.condicional.cond),
+          se_verdadeiro: mapId(S(n.condicional.se_verdadeiro).trim()),
+          se_falso: mapId(S(n.condicional.se_falso).trim())
+        }
+      : null;
+
     const rawVis = S(n?.folha?.visao_jogador).trim();
-    const folha = n?.folha && typeof n.folha === "object"
-      ? { visao_jogador: rawVis && validStates.includes(rawVis) ? rawVis : (rawVis || defState) }
+    const folha = !condicional && n?.folha && typeof n.folha === "object"
+      ? { visao_jogador: !validStates.length ? "" : (validStates.includes(rawVis) ? rawVis : (rawVis || defState)) }
       : null;
 
     const fala = S(n?.fala_npc);
+    const falaCond = A(n?.fala_condicional)
+      .filter(fc => fc && typeof fc === "object")
+      .map(fc => ({ cond: normCond(fc.cond), fala: S(fc.fala) }));
+
     const ev = S(n?.confronto_evidencia?.evidencia_id) || S(n?.confronto?.requer) || S(n?.ev);
     const perg = S(n?.confronto_evidencia?.pergunta_jogador ?? n?.confronto?.pergunta_jogador);
 
     const rawDesb = A(n?.desbloqueios ?? n?.confrontos);
-    const desbloqueios = folha
+    const desbloqueios = folha || condicional
       ? []
       : rawDesb
           .filter(x => x && S(x.ev || x.requer))
@@ -366,22 +499,25 @@ function normTree(list, fb, isScene, hasAberturas, cfg) {
 
     const out = {
       id,
-      rotulo: S(n?.rotulo),
+      rotulo: stripLeadingEmoji(n?.rotulo),
       fala_npc: fala,
+      fala_condicional: condicional ? [] : falaCond,
+      condicional,
       folha,
-      opcoes: folha ? [] : A(n?.opcoes).slice(0, 8).map(o => ({
+      opcoes: folha || condicional ? [] : A(n?.opcoes).slice(0, 8).map(o => ({
         texto: S(o?.texto),
         proximo_no: mapId(S(o?.proximo_no).trim()),
-        efeito: S(o?.efeito)
+        efeito: S(o?.efeito),
+        cond: o?.cond ? normCond(o.cond) : null
       })),
       desbloqueios,
-      confronto_evidencia: ev ? { evidencia_id: ev.trim(), pergunta_jogador: perg, resposta_npc: fala } : null,
+      confronto_evidencia: ev && !condicional ? { evidencia_id: ev.trim(), pergunta_jogador: perg, resposta_npc: fala } : null,
       evidencia_desbloqueada: S(n?.evidencia_desbloqueada || n?.ganha_evidencia || n?.ganha_informacao).trim(),
       trava_rota_secreta: S(n?.trava_rota_secreta).trim(),
       desconfianca: Math.max(0, Math.floor(+n?.desconfianca || 0))
     };
 
-    if (isScene && hasAberturas && i === 0) {
+    if (canUseAb && i === 0) {
       const abIn = n?.aberturas && typeof n.aberturas === "object" ? n.aberturas : {};
       const abOut = {};
       A(cfg.estados_folha).forEach(est => {
@@ -389,9 +525,9 @@ function normTree(list, fb, isScene, hasAberturas, cfg) {
         abOut[sk] = S(abIn[sk] ?? abIn[est.nome]);
       });
       const defSk = stateKey(defState);
-      if (!abOut[defSk] && !isPlaceholderFala(fala)) abOut[defSk] = fala;
+      if (defSk && !abOut[defSk] && !isPlaceholderFala(fala)) abOut[defSk] = fala;
       out.aberturas = abOut;
-      if (abOut[defSk]) out.fala_npc = abOut[defSk];
+      if (defSk && abOut[defSk]) out.fala_npc = abOut[defSk];
     }
     return out;
   });
@@ -442,7 +578,7 @@ function normalizeNpc(d, cfg) {
     const prevSc = idx > 0 ? cfg.cenas[idx - 1] : null;
     const prevMz = prevSc && prevSc.matriz ? (cenasOut[prevSc.id]?.matriz ?? flatScenes[prevSc.id]?.matriz) : null;
     const rawNos = rawSc?.arvores?.principal?.nos ?? rawSc?.arvore?.nos ?? rawSc?.nos;
-    const hasAb = !!(cfg.modulos.aberturas_dinamicas && sc.aberturas);
+    const hasAb = !!(cfg.modulos.aberturas_dinamicas && sc.aberturas && cfg.estados_folha.length > 0);
     const tree = normTree(rawNos, [N("Entrada", "Abertura", "", [])], true, hasAb, cfg);
 
     if (hasAb && tree.nos[0]) {
@@ -456,10 +592,10 @@ function normalizeNpc(d, cfg) {
         }
       });
       const defSk = stateKey(defState);
-      if (root.aberturas[defSk]) root.fala_npc = root.aberturas[defSk];
+      if (defSk && root.aberturas[defSk]) root.fala_npc = root.aberturas[defSk];
     }
 
-    const matriz = sc.matriz && cfg.modulos.matriz_transicao
+    const matriz = sc.matriz && cfg.modulos.matriz_transicao && mKeys.length > 0
       ? mKeys.map(k => {
           const f = A(rawSc?.matriz).find(x => x?.k === k);
           return { k, efeito: f && f.efeito !== undefined ? S(f.efeito) : "" };
@@ -485,16 +621,16 @@ function normalizeNpc(d, cfg) {
   cfg.arvores_extras.forEach(ex => {
     let src = extrasIn[ex.id]?.nos;
     if (!src && ex.id === "VIES") {
-      src = d?.arvore_vies?.nos ?? d1?.arvores?.vies?.nos ?? (Array.isArray(d1?.vieses) ? fxLegacyTree(d1.vieses, "🧪 Enviesamento", "(o jogador provoca o Enviesamento)", defState) : undefined);
+      src = d?.arvore_vies?.nos ?? d1?.arvores?.vies?.nos ?? (Array.isArray(d1?.vieses) ? fxLegacyTree(d1.vieses, "Enviesamento", "", defState) : undefined);
     }
     if (!src && ex.id === "INJECAO") {
-      src = d?.arvore_injecao?.nos ?? d1?.arvores?.injecao?.nos ?? (Array.isArray(d1?.injecoes) ? fxLegacyTree(d1.injecoes, "⚡ Injeção", "(o jogador aciona a Injeção)", defState) : undefined);
+      src = d?.arvore_injecao?.nos ?? d1?.arvores?.injecao?.nos ?? (Array.isArray(d1?.injecoes) ? fxLegacyTree(d1.injecoes, "Injeção", "", defState) : undefined);
     }
-    extrasOut[ex.id] = normTree(src, [N("Raiz", ex.rotulo, "(o jogador aciona " + ex.rotulo + ")", [])], false, false, cfg);
+    extrasOut[ex.id] = normTree(src, [N("Raiz", ex.rotulo, "", [])], false, false, cfg);
   });
 
-  const nome = S(d?.npc?.nome).trim() || (cfg.termos.npc_singular + " 1");
-  const falante = S(d?.npc?.falante).trim() || nome.split(" ")[0];
+  const nome = S(d?.npc?.nome).trim() || "NPC 1";
+  const falante = S(d?.npc?.falante).trim() || nome.split(" ")[0] || "NPC";
   const npcId = S(d?.npc?.id).trim() || slug(falante) || "npc_1";
   const allValidAbas = [...cfg.cenas.map(c => c.id), ...cfg.arvores_extras.map(e => e.id)];
 
@@ -528,15 +664,9 @@ function normalizeNpc(d, cfg) {
 
 function blankNpcForConfig(cfg, num) {
   const idx = num || 1;
-  const sing = cfg.termos.npc_singular || "Personagem";
   return normalizeNpc({
     versao: 7,
-    npc: {
-      id: slug(sing) + "_" + idx,
-      nome: "Novo " + sing + " " + idx,
-      falante: sing + " " + idx,
-      tipo: cfg.template === "turing_test" ? "Humano" : ""
-    }
+    npc: { id: "npc_" + idx, nome: "NPC " + idx, falante: "NPC " + idx, tipo: "" }
   }, cfg);
 }
 
@@ -548,60 +678,37 @@ function allTreesOfNpc(npc, cfg) {
 }
 
 /* ==========================================================================
-   CRIAÇÃO E CARREGAMENTO DE PROJETOS DE JOGO
+   CRIAÇÃO E PERSISTÊNCIA DE PROJETOS
    ========================================================================== */
-function buildOfficialTuringGame() {
-  const cfg = makeTuringConfig("turing_crt");
-  const presets = A(window.TURING_PRESETS);
-  const npcs = presets.length ? presets.map(p => normalizeNpc(clone(p), cfg)) : [blankNpcForConfig(cfg, 1)];
-  const met = presets[0]?.metricas?.desconfianca || { limite: 3, consequencia: "" };
+function createGameFromCustomConfig(nome, cfg, metricaLimite) {
+  const normCfg = normalizeConfig(cfg, cfg?.template === "turing_test");
   return {
-    game_id: TURING_OFFICIAL_ID,
-    game_nome: "Turing Test (Master Oficial)",
-    config: cfg,
+    game_id: uid("papo"),
+    game_nome: S(nome).trim() || "Novo Papo",
+    config: normCfg,
     npc_ativo: 0,
-    nome_jogador: "Inspetor",
+    nome_jogador: "Jogador",
     metricas: {
       desconfianca: {
-        limite: Math.max(1, Math.floor(+met.limite || 3)),
-        consequencia: S(met.consequencia) || "Ao acumular 3 pontos globais de autodesconfiança, dispara consequência narrativa do protagonista (também sintético)."
-      }
-    },
-    npcs
-  };
-}
-
-function createNewGame(nome, templateKey, themeKey) {
-  const cfg = makeTemplateConfig(templateKey, themeKey);
-  const gName = S(nome).trim() || "Novo Jogo";
-  const gId = slug(gName) + "_" + Math.random().toString(36).slice(2, 6);
-  return {
-    game_id: gId,
-    game_nome: gName,
-    config: cfg,
-    npc_ativo: 0,
-    nome_jogador: templateKey === "turing_test" ? "Inspetor" : "Jogador",
-    metricas: {
-      desconfianca: {
-        limite: 3,
+        limite: Math.max(1, Math.floor(+metricaLimite || 3)),
         consequencia: ""
       }
     },
-    npcs: [blankNpcForConfig(cfg, 1)]
+    npcs: [blankNpcForConfig(normCfg, 1)]
   };
 }
 
-function normalizeGame(raw) {
-  if (!raw || typeof raw !== "object") return buildOfficialTuringGame();
+function normalizeGame(raw, fallbackTheme) {
+  if (!raw || typeof raw !== "object") return createGameFromCustomConfig("Novo Papo", makeTuringConfig(fallbackTheme), 3);
   const meta = raw.dtools_meta || {};
   const isTuringHint = !raw.config && (raw.versao_workspace === 2 || A(raw.npcs).some(n => n?.semanas || n?.arvore_vies));
-  const cfg = normalizeConfig(raw.config, isTuringHint);
+  const cfg = normalizeConfig(raw.config || { template: isTuringHint ? "turing_test" : "livre", theme: fallbackTheme || DEFAULT_THEME }, isTuringHint);
   const rawNpcs = A(raw.npcs);
   const npcs = rawNpcs.length ? rawNpcs.map(n => normalizeNpc(n, cfg)) : [blankNpcForConfig(cfg, 1)];
   const idx = Math.min(npcs.length - 1, Math.max(0, Math.floor(+raw.npc_ativo || 0)));
   return {
-    game_id: S(raw.game_id || meta.game_id).trim() || uid("jogo"),
-    game_nome: S(raw.game_nome || meta.game_name).trim() || (isTuringHint ? "Projeto Turing Test" : "Projeto de Diálogos"),
+    game_id: S(raw.game_id || meta.game_id).trim() || uid("papo"),
+    game_nome: S(raw.game_nome || meta.game_name).trim() || "Papo Carregado",
     config: cfg,
     npc_ativo: idx,
     nome_jogador: S(raw.nome_jogador).trim() || "Inspetor",
@@ -620,13 +727,10 @@ function loadRegistry() {
     const raw = lsGet(K_INDEX);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (parsed && Array.isArray(parsed.list) && parsed.list.length) return parsed;
+      if (parsed && Array.isArray(parsed.list)) return parsed;
     }
   } catch (e) {}
-  return {
-    activeId: TURING_OFFICIAL_ID,
-    list: [{ id: TURING_OFFICIAL_ID, nome: "Turing Test (Master Oficial)", template: "turing_test", theme: "turing_crt", npcCount: 3, updatedAt: "" }]
-  };
+  return { activeId: "", list: [] };
 }
 
 function saveRegistry(reg) {
@@ -634,120 +738,43 @@ function saveRegistry(reg) {
 }
 
 function loadGameById(gameId) {
+  if (!gameId) return null;
   const tryParse = k => {
     try {
       const raw = lsGet(k);
       return raw ? normalizeGame(JSON.parse(raw)) : null;
     } catch (e) { return null; }
   };
-  const loaded = tryParse(K_GAME_PREFIX + gameId) || tryParse(K_GOOD_PREFIX + gameId);
-  if (loaded) return loaded;
-  if (gameId === TURING_OFFICIAL_ID) {
-    // Migra automaticamente do storage anterior caso o usuário já tenha editado algo antes
-    const legacyWs = tryParse("turing-master-ws-v2") || tryParse("turing-master-ws-good-v2");
-    if (legacyWs) {
-      legacyWs.game_id = TURING_OFFICIAL_ID;
-      legacyWs.game_nome = "Turing Test (Master Oficial)";
-      return legacyWs;
-    }
-    return buildOfficialTuringGame();
-  }
-  return null;
+  return tryParse(K_GAME_PREFIX + gameId) || tryParse(K_GOOD_PREFIX + gameId);
 }
 
-function bootInitialSystem() {
-  const reg = loadRegistry();
-  if (!reg.list.some(g => g.id === TURING_OFFICIAL_ID)) {
-    reg.list.unshift({ id: TURING_OFFICIAL_ID, nome: "Turing Test (Master Oficial)", template: "turing_test", theme: "turing_crt", npcCount: 3, updatedAt: "" });
-  }
-  let game = loadGameById(reg.activeId);
-  if (!game) {
-    reg.activeId = TURING_OFFICIAL_ID;
-    game = loadGameById(TURING_OFFICIAL_ID) || buildOfficialTuringGame();
-  }
-  return { reg, game };
-}
-
-/* ==========================================================================
-   AUTO-DETECTOR INTELIGENTE DE ARQUIVOS SALVOS ANTERIORMENTE
-   ========================================================================== */
 function detectImportedFile(parsed) {
   if (!parsed || typeof parsed !== "object") throw new Error("Arquivo JSON vazio ou inválido.");
   const meta = parsed.dtools_meta || {};
 
-  // 1) Árvore única exportada
   if (meta.scope === "single_tree" || (Array.isArray(parsed.nos) && !parsed.npc && !parsed.npcs)) {
-    return {
-      kind: "single_tree",
-      badge: "🌿 ÁRVORE INDIVIDUAL",
-      title: (meta.target_label || meta.target_id || "Árvore") + (meta.npc_name ? " · " + meta.npc_name : ""),
-      gameId: meta.game_id || "",
-      gameName: meta.game_name || "",
-      targetId: meta.target_id || "",
-      nodeCount: A(parsed.nos).length,
-      payload: parsed
-    };
+    return { kind: "single_tree", gameName: meta.game_name || "", targetId: meta.target_id || "", payload: parsed };
   }
-
-  // 2) Pacote de Capítulo / Semana (ex.: Semana 1 D1..D3)
   if (meta.scope === "chapter_pack" || (Array.isArray(parsed.cenas_pack) && !parsed.npcs)) {
-    const list = A(parsed.cenas_pack || parsed.dias);
-    return {
-      kind: "chapter_pack",
-      badge: "📅 PACOTE DE SEMANA / CAPÍTULOS",
-      title: (meta.group_id || "Pacote") + " (" + list.map(x => x.id).join(", ") + ")" + (meta.npc_name ? " · " + meta.npc_name : ""),
-      gameId: meta.game_id || "",
-      gameName: meta.game_name || "",
-      npcId: meta.npc_id || "",
-      sceneIds: list.map(x => x.id),
-      payload: parsed
-    };
+    return { kind: "chapter_pack", gameName: meta.game_name || "", payload: parsed };
   }
-
-  // 3) Jogo Completo
   if (meta.scope === "game" || Array.isArray(parsed.npcs)) {
-    const isTuring = !parsed.config && (parsed.versao_workspace === 2 || A(parsed.npcs).some(n => n?.semanas));
-    const gName = S(parsed.game_nome || meta.game_name || (isTuring ? "Projeto Turing Test" : "Jogo Importado"));
-    const gId = S(parsed.game_id || meta.game_id || (isTuring ? TURING_OFFICIAL_ID : slug(gName)));
-    return {
-      kind: "game",
-      badge: "🎮 PROJETO DE JOGO COMPLETO",
-      title: gName + " (" + A(parsed.npcs).length + " personagens)",
-      gameId: gId,
-      gameName: gName,
-      template: parsed.config?.template || meta.template || (isTuring ? "turing_test" : "livre"),
-      npcCount: A(parsed.npcs).length,
-      payload: parsed
-    };
+    return { kind: "game", gameName: S(parsed.game_nome || meta.game_name || "Papo Global"), payload: parsed };
   }
-
-  // 4) NPC / Personagem completo (TuringTest v4/v5/v6/v7 ou Jogo Geral)
   if (meta.scope === "npc" || (parsed.npc && (parsed.semanas || parsed.dias || parsed.cenas))) {
     const isTuringNpc = !!(parsed.semanas || parsed.arvore_vies || parsed.arvore_injecao || (parsed.dias?.D1 && !parsed.cenas));
-    const npcName = S(parsed.npc?.nome || "Personagem");
-    return {
-      kind: "npc",
-      badge: "👤 PERSONAGEM / SUSPEITO COMPLETO",
-      title: npcName + (isTuringNpc ? " · Formato TuringTest" : " · Formato Jogo Geral"),
-      isTuringNpc,
-      gameId: meta.game_id || (isTuringNpc ? TURING_OFFICIAL_ID : ""),
-      gameName: meta.game_name || (isTuringNpc ? "Turing Test" : ""),
-      npcName,
-      npcId: S(parsed.npc?.id) || slug(npcName.split(" ")[0]),
-      payload: parsed
-    };
+    return { kind: "npc", isTuringNpc, gameName: meta.game_name || "", npcName: S(parsed.npc?.nome || "NPC"), payload: parsed };
   }
-
-  throw new Error("Estrutura JSON não reconhecida como Jogo, NPC, Semana ou Árvore do DialogueTools.");
+  throw new Error("Formato JSON não reconhecido pelo Dialogue Tool.");
 }
 
 /* ==========================================================================
-   EXPORTADORES (JOGO, NPC, SEMANA, ÁRVORE, ENGINE RUNTIME, TXT C, ROTEIRO)
+   EXPORTADORES (JSON ESCOPOS + TXT JOGO C + RUNTIME + ROTEIRO)
    ========================================================================== */
 function makeMeta(game, scope, extra) {
   return {
     app: "DialogueTools",
-    format_version: 2,
+    format_version: 3,
     scope,
     game_id: game.game_id,
     game_name: game.game_nome,
@@ -759,8 +786,19 @@ function makeMeta(game, scope, extra) {
 
 function serializeNode(n, evs, keepAberturas) {
   const isInf = id => A(evs).some(e => e.id === id && e.tipo === "informacao");
-  const { desbloqueios, confronto_evidencia: c, evidencia_desbloqueada: g, aberturas, ...r } = n;
-  const o = { ...r, confrontos: A(desbloqueios).map(x => ({ requer: x.ev, no: x.no })) };
+  const { desbloqueios, confronto_evidencia: c, evidencia_desbloqueada: g, aberturas, opcoes, fala_condicional, condicional, ...r } = n;
+  const opsOut = A(opcoes).map(o => {
+    const baseOp = { texto: o.texto, proximo_no: o.proximo_no, efeito: o.efeito };
+    if (o.cond) baseOp.cond = o.cond;
+    return baseOp;
+  });
+  const o = {
+    ...r,
+    opcoes: opsOut,
+    confrontos: A(desbloqueios).map(x => ({ requer: x.ev, no: x.no }))
+  };
+  if (condicional) o.condicional = clone(condicional);
+  if (A(fala_condicional).length) o.fala_condicional = clone(fala_condicional);
   if (keepAberturas && aberturas) o.aberturas = clone(aberturas);
   if (c) o.confronto = { requer: c.evidencia_id, pergunta_jogador: c.pergunta_jogador, resposta_npc: o.fala_npc };
   if (g) o[isInf(g) ? "ganha_informacao" : "ganha_evidencia"] = g;
@@ -775,7 +813,7 @@ function toExportNpc(npc, game) {
   const cenasObj = {};
   cfg.cenas.forEach(sc => {
     const cData = npc.cenas?.[sc.id] || { nos: [], matriz: [], veredito: null };
-    const hasAb = !!(cfg.modulos.aberturas_dinamicas && sc.aberturas);
+    const hasAb = !!(cfg.modulos.aberturas_dinamicas && sc.aberturas && cfg.estados_folha.length > 0);
     cenasObj[sc.id] = {
       id: sc.id,
       rotulo: sc.rotulo,
@@ -803,7 +841,6 @@ function toExportNpc(npc, game) {
     informacoes: ev.filter(e => e.tipo === "informacao").map(mk)
   };
 
-  // Preserva 100% do schema oficial v7 do TuringTest quando aplicável
   if (cfg.template === "turing_test") {
     const groups = [];
     cfg.cenas.forEach(sc => {
@@ -845,14 +882,10 @@ function toExportChapterPack(npc, game, groupName) {
   const ev = A(npc.evidencias);
   const matching = cfg.cenas.filter(sc => (groupName ? sc.grupo === groupName : true));
   return {
-    dtools_meta: makeMeta(game, "chapter_pack", {
-      npc_id: npc.npc.id,
-      npc_name: npc.npc.nome,
-      group_id: groupName || "TODAS_CENAS"
-    }),
+    dtools_meta: makeMeta(game, "chapter_pack", { npc_id: npc.npc.id, npc_name: npc.npc.nome, group_id: groupName || "TODAS" }),
     cenas_pack: matching.map(sc => {
       const cData = npc.cenas?.[sc.id] || { nos: [], matriz: [], veredito: null };
-      const hasAb = !!(cfg.modulos.aberturas_dinamicas && sc.aberturas);
+      const hasAb = !!(cfg.modulos.aberturas_dinamicas && sc.aberturas && cfg.estados_folha.length > 0);
       return {
         id: sc.id,
         rotulo: sc.rotulo,
@@ -871,7 +904,7 @@ function toExportSingleTree(npc, game, abaId) {
   const sc = cfg.cenas.find(c => c.id === abaId);
   const ex = cfg.arvores_extras.find(e => e.id === abaId);
   const nos = sc ? (npc.cenas?.[abaId]?.nos || []) : (npc.extras?.[abaId]?.nos || []);
-  const hasAb = !!(sc && cfg.modulos.aberturas_dinamicas && sc.aberturas);
+  const hasAb = !!(sc && cfg.modulos.aberturas_dinamicas && sc.aberturas && cfg.estados_folha.length > 0);
   return {
     dtools_meta: makeMeta(game, "single_tree", {
       npc_id: npc.npc.id,
@@ -893,35 +926,30 @@ function toExportRuntimeEngine(npc, game) {
     A(nos).forEach(n => { by[n.id] = n; });
     return A(nos).map((n, idx) => ({
       id: n.id,
-      speaker: fal,
-      text: n.fala_npc,
+      type: n.condicional ? "if_branch" : (n.folha ? "leaf" : "speech"),
+      speaker: n.condicional ? null : fal,
+      text: n.condicional ? null : n.fala_npc,
+      ...(A(n.fala_condicional).length ? { conditional_texts: n.fala_condicional } : {}),
+      ...(n.condicional ? { branch_if: n.condicional } : {}),
       ...(hasAb && idx === 0 && n.aberturas ? { openings_by_state: n.aberturas } : {}),
-      choices: [
-        ...A(n.opcoes).map(o => ({ text: o.texto, next: o.proximo_no, req: null })),
+      choices: n.condicional ? [] : [
+        ...A(n.opcoes).map(o => ({ text: o.texto, next: o.proximo_no, req: null, if_cond: o.cond || null })),
         ...A(n.desbloqueios).map(x => ({
           text: S(by[x.no]?.confronto_evidencia?.pergunta_jogador),
           next: x.no,
-          req: x.ev
+          req: x.ev,
+          if_cond: null
         }))
       ],
-      leaf_state: n.folha ? n.folha.visao_jogador : null,
+      leaf_state: n.folha ? (n.folha.visao_jogador || "END") : null,
       grant_item: n.evidencia_desbloqueada || null,
       metric_delta: n.desconfianca || 0
     }));
   };
   const trees = {};
-  cfg.cenas.forEach(sc => {
-    trees[sc.id] = mapNos(npc.cenas?.[sc.id]?.nos, !!(cfg.modulos.aberturas_dinamicas && sc.aberturas));
-  });
-  cfg.arvores_extras.forEach(ex => {
-    trees[ex.id] = mapNos(npc.extras?.[ex.id]?.nos, false);
-  });
-  return {
-    game_id: game.game_id,
-    npc: npc.npc,
-    items: npc.evidencias,
-    trees
-  };
+  cfg.cenas.forEach(sc => { trees[sc.id] = mapNos(npc.cenas?.[sc.id]?.nos, !!(cfg.modulos.aberturas_dinamicas && sc.aberturas && cfg.estados_folha.length > 0)); });
+  cfg.arvores_extras.forEach(ex => { trees[ex.id] = mapNos(npc.extras?.[ex.id]?.nos, false); });
+  return { game_id: game.game_id, npc: npc.npc, items: npc.evidencias, trees };
 }
 
 function toTuringTxt(npc, cfg, tk) {
@@ -953,8 +981,22 @@ function toTuringTxt(npc, cfg, tk) {
   L.push("");
 
   nos.forEach((n, idx) => {
-    L.push("[NODE: " + rn(n.id) + "]", "SPEAKER: " + fal);
-    const ab = isDay && sc.aberturas && cfg.modulos.aberturas_dinamicas && idx === 0 ? n.aberturas : null;
+    L.push("[NODE: " + rn(n.id) + "]");
+    if (n.condicional) {
+      L.push("TYPE: IF");
+      L.push("IF: " + condTxtExpr(n.condicional.cond) + " -> " + rn(n.condicional.se_verdadeiro));
+      L.push("ELSE: -> " + rn(n.condicional.se_falso));
+      if (n.evidencia_desbloqueada) {
+        const isInf = A(npc.evidencias).some(e => e.id === n.evidencia_desbloqueada && e.tipo === "informacao");
+        L.push((isInf ? "GANHA_INF: " : "GANHA_EV: ") + n.evidencia_desbloqueada);
+      }
+      if (n.desconfianca > 0) L.push("DESCONFIANCA: +" + n.desconfianca);
+      L.push("");
+      return;
+    }
+
+    L.push("SPEAKER: " + fal);
+    const ab = isDay && sc.aberturas && cfg.modulos.aberturas_dinamicas && cfg.estados_folha.length > 0 && idx === 0 ? n.aberturas : null;
     if (ab && (S(ab.Duvida) || S(ab.Confianca) || S(ab.Pressao))) {
       L.push("TEXT: " + one(ab.Duvida || n.fala_npc));
       if (S(ab.Confianca).trim()) L.push("TEXT_CONFIANCA: " + one(ab.Confianca));
@@ -962,14 +1004,21 @@ function toTuringTxt(npc, cfg, tk) {
     } else {
       L.push("TEXT: " + one(n.fala_npc));
     }
-    A(n.opcoes).forEach(o => L.push("CHOICE: " + one(o.texto) + " -> " + rn(o.proximo_no)));
+    A(n.fala_condicional).forEach(fc => {
+      if (S(fc.fala).trim()) L.push("TEXT_IF: [" + condTxtExpr(fc.cond) + "] " + one(fc.fala));
+    });
+
+    A(n.opcoes).forEach(o => {
+      L.push("CHOICE: " + one(o.texto) + " -> " + rn(o.proximo_no));
+      if (o.cond) L.push("CHOICE_IF: " + condTxtExpr(o.cond));
+    });
     A(n.desbloqueios).forEach(x => {
       L.push(
         "CHOICE: " + one(by[x.no]?.confronto_evidencia?.pergunta_jogador) + " -> " + rn(x.no),
         "REQ: " + x.ev
       );
     });
-    if (n.folha) L.push("LEAF: " + n.folha.visao_jogador);
+    if (n.folha) L.push("LEAF: " + (n.folha.visao_jogador || "FIM"));
     if (n.evidencia_desbloqueada) {
       const isInf = A(npc.evidencias).some(e => e.id === n.evidencia_desbloqueada && e.tipo === "informacao");
       L.push((isInf ? "GANHA_INF: " : "GANHA_EV: ") + n.evidencia_desbloqueada);
@@ -980,19 +1029,15 @@ function toTuringTxt(npc, cfg, tk) {
   return L.join("\n");
 }
 
-function toReadableScript(npc, game, abaId) {
+function toReadableScript(npc, game) {
   const cfg = game.config;
-  const targets = abaId === "__ALL__"
-    ? [...cfg.cenas.map(c => [c.id, c.rotulo, npc.cenas?.[c.id]?.nos || [], c.aberturas]), ...cfg.arvores_extras.map(e => [e.id, e.rotulo, npc.extras?.[e.id]?.nos || [], false])]
-    : (() => {
-        const sc = cfg.cenas.find(c => c.id === abaId);
-        const ex = cfg.arvores_extras.find(e => e.id === abaId);
-        return [[abaId, sc?.rotulo || ex?.rotulo || abaId, sc ? (npc.cenas?.[abaId]?.nos || []) : (npc.extras?.[abaId]?.nos || []), !!sc?.aberturas]];
-      })();
-
+  const targets = [
+    ...cfg.cenas.map(c => [c.id, c.rotulo, npc.cenas?.[c.id]?.nos || [], c.aberturas]),
+    ...cfg.arvores_extras.map(e => [e.id, e.rotulo, npc.extras?.[e.id]?.nos || [], false])
+  ];
   const out = [
     "================================================================",
-    "JOGO: " + game.game_nome + " | PERSONAGEM: " + npc.npc.nome + " (" + (npc.npc.tipo || "sem subtítulo") + ")",
+    "PROJETO: " + game.game_nome + " | NPC: " + npc.npc.nome,
     "================================================================",
     ""
   ];
@@ -1002,12 +1047,19 @@ function toReadableScript(npc, game, abaId) {
     const by = {};
     A(nos).forEach(n => { by[n.id] = n; });
     A(nos).forEach((n, idx) => {
+      if (n.condicional) {
+        out.push("* (" + n.id + ") [IF: " + condHumanLabel(n.condicional.cond) + "]");
+        out.push("    ENTÃO --> (" + (n.condicional.se_verdadeiro || "?") + ")");
+        out.push("    SENÃO --> (" + (n.condicional.se_falso || "?") + ")");
+        out.push("");
+        return;
+      }
       const tags = [];
-      if (n.folha) tags.push("FIM: " + n.folha.visao_jogador);
+      if (n.folha) tags.push("FIM" + (n.folha.visao_jogador ? ": " + n.folha.visao_jogador : ""));
       if (n.evidencia_desbloqueada) tags.push("GANHA: " + n.evidencia_desbloqueada);
-      if (n.desconfianca > 0) tags.push(cfg.termos.metrica_icone + " +" + n.desconfianca);
-      out.push("• (" + n.id + ") " + (n.rotulo ? "[" + n.rotulo + "] " : "") + (tags.length ? "{" + tags.join(" | ") + "}" : ""));
-      if (hasAb && cfg.modulos.aberturas_dinamicas && idx === 0 && n.aberturas) {
+      if (n.desconfianca > 0) tags.push("MÉTRICA +" + n.desconfianca);
+      out.push("* (" + n.id + ") " + (n.rotulo ? "[" + n.rotulo + "] " : "") + (tags.length ? "{" + tags.join(" | ") + "}" : ""));
+      if (hasAb && cfg.modulos.aberturas_dinamicas && cfg.estados_folha.length > 0 && idx === 0 && n.aberturas) {
         cfg.estados_folha.forEach(est => {
           const v = S(n.aberturas[stateKey(est.nome)]);
           if (v) out.push("    " + (npc.npc.falante || npc.npc.nome) + " (" + est.nome + "): \"" + v + "\"");
@@ -1015,8 +1067,12 @@ function toReadableScript(npc, game, abaId) {
       } else {
         out.push("    " + (npc.npc.falante || npc.npc.nome) + ": \"" + S(n.fala_npc) + "\"");
       }
+      A(n.fala_condicional).forEach(fc => {
+        out.push("    [SE " + condHumanLabel(fc.cond) + "] " + (npc.npc.falante || npc.npc.nome) + ": \"" + S(fc.fala) + "\"");
+      });
       A(n.opcoes).forEach((o, j) => {
-        out.push("      [" + (LET[j] || j + 1) + "] Jogador: \"" + o.texto + "\"  --> (" + (o.proximo_no || "?") + ")");
+        const cTag = o.cond ? " [SE " + condHumanLabel(o.cond) + "]" : "";
+        out.push("      [" + (LET[j] || j + 1) + "]" + cTag + " Jogador: \"" + o.texto + "\"  --> (" + (o.proximo_no || "?") + ")");
       });
       A(n.desbloqueios).forEach(x => {
         out.push("      [REQ " + x.ev + "] Jogador: \"" + S(by[x.no]?.confronto_evidencia?.pergunta_jogador) + "\"  --> (" + x.no + ")");
@@ -1028,14 +1084,14 @@ function toReadableScript(npc, game, abaId) {
 }
 
 /* ==========================================================================
-   VALIDAÇÃO ESTRUTURAL ADAPTADA À CONFIGURAÇÃO DO JOGO
+   VALIDAÇÃO ESTRUTURAL
    ========================================================================== */
 function isUntouchedBlankScene(sc, idx, nos) {
   if (idx === 0 || nos.length !== 1) return false;
   const r = nos[0];
   const abVals = r.aberturas ? Object.values(r.aberturas) : [];
   const abEmpty = abVals.every(v => !S(v).trim());
-  return !S(r.fala_npc).trim() && abEmpty && !A(r.opcoes).length && !A(r.desbloqueios).length;
+  return !S(r.fala_npc).trim() && abEmpty && !A(r.opcoes).length && !A(r.desbloqueios).length && !A(r.fala_condicional).length;
 }
 
 function validarNpc(d, cfg) {
@@ -1061,6 +1117,7 @@ function validarNpc(d, cfg) {
   allTreesOfNpc(d, cfg).forEach(([aba, nos]) => {
     const scIdx = cfg.cenas.findIndex(c => c.id === aba);
     const sc = scIdx >= 0 ? cfg.cenas[scIdx] : null;
+    const ex = !sc ? cfg.arvores_extras.find(e => e.id === aba) : null;
     const isScene = !!sc;
 
     if (isScene && isUntouchedBlankScene(sc, scIdx, nos)) {
@@ -1070,68 +1127,60 @@ function validarNpc(d, cfg) {
 
     const ids = new Set(nos.map(n => n.id));
     const P = plan(nos);
-    P.roots.slice(1).forEach(r => pushW(aba, r, "nó solto / órfão (nenhuma opção ou confronto aponta para ele)"));
-
-    if (cfg.template === "turing_test" && d.npc?.id === "maria" && aba === "D3" && !ids.has("B.2.1")) {
-      pushW("D3", nos[0]?.id || "", "gameplay_scene.c referencia o ID hardcoded 'B.2.1' da Maria no Dia 3");
-    }
+    P.roots.slice(1).forEach(r => pushW(aba, r, "nó solto / órfão (nenhum caminho leva até ele)"));
 
     nos.forEach((n, idx) => {
       const isRoot = idx === 0;
-      const usesAb = isScene && sc.aberturas && cfg.modulos.aberturas_dinamicas && isRoot;
+      const usesAb = isScene && sc.aberturas && cfg.modulos.aberturas_dinamicas && cfg.estados_folha.length > 0 && isRoot;
+      const rootSkipsSpeech = !isScene && isRoot && ex?.modo_raiz !== "fala";
+
+      if (isTuringC && n.id.length > 31) pushW(aba, n.id, "ID maior que 31 caracteres");
+
+      if (n.condicional) {
+        const c = n.condicional;
+        if (c.cond?.tipo === "custom" && !S(c.cond.valor).trim()) pushW(aba, n.id, "condição livre do IF vazia");
+        if (!c.se_verdadeiro) pushW(aba, n.id, "IF sem destino para ENTÃO (Verdadeiro)");
+        else if (!ids.has(c.se_verdadeiro)) pushW(aba, n.id, "IF ENTÃO aponta para nó inexistente (" + c.se_verdadeiro + ")");
+        if (!c.se_falso) pushW(aba, n.id, "IF sem destino para SENÃO (Falso)");
+        else if (!ids.has(c.se_falso)) pushW(aba, n.id, "IF SENÃO aponta para nó inexistente (" + c.se_falso + ")");
+        return;
+      }
 
       if (usesAb) {
         const ab = n.aberturas || {};
         cfg.estados_folha.forEach(est => {
           const val = S(ab[stateKey(est.nome)]);
-          if (!val.trim()) pushW(aba, n.id, "fala de abertura (" + est.nome + ") vazia");
-          if (isTuringC && val.length > 500) pushW(aba, n.id, "abertura (" + est.nome + ") > 500 caracteres");
+          if (!val.trim()) pushW(aba, n.id, "fala inicial para '" + est.nome + "' está vazia");
+          if (isTuringC && val.length > 500) pushW(aba, n.id, "abertura '" + est.nome + "' excede 500 caracteres");
         });
-      } else if (isScene || !isRoot) {
-        if (!S(n.fala_npc).trim()) pushW(aba, n.id, "fala vazia");
-        if (isTuringC && S(n.fala_npc).length > 500) pushW(aba, n.id, "fala > 500 caracteres (limite do buffer C)");
+      } else if (!rootSkipsSpeech) {
+        if (!S(n.fala_npc).trim()) pushW(aba, n.id, "fala do NPC vazia");
+        if (isTuringC && S(n.fala_npc).length > 500) pushW(aba, n.id, "fala excede 500 caracteres");
       }
 
-      if (isTuringC && n.id.length > 31) pushW(aba, n.id, "ID maior que 31 caracteres");
+      A(n.fala_condicional).forEach((fc, fi) => {
+        if (!S(fc.fala).trim()) pushW(aba, n.id, "fala condicional IF #" + (fi + 1) + " vazia");
+      });
 
       if (n.confronto_evidencia) {
-        const cid = S(n.confronto_evidencia.evidencia_id);
         const perg = S(n.confronto_evidencia.pergunta_jogador);
-        if (!perg.trim()) pushW(aba, n.id, "confronto sem fala/pergunta do jogador");
-        if (isTuringC && perg.length > 500) pushW(aba, n.id, "pergunta do confronto > 500 caracteres");
-        if (cfg.modulos.inventario && cid && !evIds.has(cid)) pushW(aba, n.id, "confronto exige item não cadastrado (" + cid + ")");
-      }
-
-      if (cfg.modulos.inventario && n.evidencia_desbloqueada && !evIds.has(n.evidencia_desbloqueada)) {
-        pushW(aba, n.id, "recompensa referencia item não cadastrado (" + n.evidencia_desbloqueada + ")");
+        const cid = S(n.confronto_evidencia.evidencia_id);
+        if (!perg.trim()) pushW(aba, n.id, "confronto sem fala do jogador");
+        if (cfg.modulos.inventario && cid && !evIds.has(cid)) pushW(aba, n.id, "confronto pede item não cadastrado (" + cid + ")");
       }
 
       n.opcoes.forEach((o, j) => {
         const letra = "opção " + (LET[j] || j + 1);
         if (!o.texto.trim()) pushW(aba, n.id, letra + " sem texto");
-        if (isTuringC && o.texto.length > 500) pushW(aba, n.id, letra + " > 500 caracteres");
-        if (/^A\s+"/.test(o.texto) && (o.texto.match(/"/g) || []).length === 1) pushW(aba, n.id, letra + " contém prefixo residual 'A \"'");
-        if (isTuringC && o.texto.includes(" -> ")) pushW(aba, n.id, letra + " contém ' -> ' (será convertido em ' → ' no TXT)");
         if (!o.proximo_no) pushW(aba, n.id, letra + " sem destino");
         else if (!ids.has(o.proximo_no)) pushW(aba, n.id, letra + " aponta para nó inexistente (" + o.proximo_no + ")");
       });
 
       if (isTuringC && n.opcoes.length + n.desbloqueios.length > 4) {
-        pushW(aba, n.id, "mais de 4 escolhas (" + (n.opcoes.length + n.desbloqueios.length) + "/4 · MAX_CHOICES em C corta o excesso)");
+        pushW(aba, n.id, "mais de 4 escolhas (" + (n.opcoes.length + n.desbloqueios.length) + "/4 · MAX_CHOICES em C)");
       }
       if (!n.folha && !n.opcoes.length && !n.desbloqueios.length) {
-        pushW(aba, n.id, "beco sem saída (sem opções e não marcado como Folha)");
-      }
-
-      if (isTuringC) {
-        const corpus = [
-          usesAb ? Object.values(n.aberturas || {}).join(" ") : n.fala_npc,
-          ...n.opcoes.map(o => o.texto),
-          n.confronto_evidencia?.pergunta_jogador || ""
-        ].join(" ");
-        const brk = corpus.match(/\[[A-Za-zÀ-ÿ_]+\]/g) || [];
-        [...new Set(brk)].filter(p => p !== "[nome]").forEach(p => pushW(aba, n.id, "placeholder sem definição no C: " + p + " (use [nome])"));
-        if (/\/Nome\//i.test(corpus)) pushW(aba, n.id, "placeholder '/Nome/' legado (padronize para [nome])");
+        pushW(aba, n.id, "beco sem saída (adicione uma opção ou marque como Fim)");
       }
     });
   });
@@ -1141,37 +1190,43 @@ function validarNpc(d, cfg) {
       sev: "info",
       aba: blankScenes[0].id,
       nodeId: "Entrada",
-      label: "CENAS EM BRANCO",
-      msg: blankScenes.map(s => s.rotulo).join(", ") + " ainda não preenchida(s)"
+      label: "ETAPAS VAZIAS",
+      msg: blankScenes.map(s => s.rotulo).join(", ") + " ainda em branco"
     });
   }
   return { warns, infos };
 }
 
 /* ==========================================================================
-   UI BASE
+   COMPONENTES SEMÂNTICOS DE UI (ZERO CONFLITOS DE HOVER)
    ========================================================================== */
-const BTN = "px-2 py-0.5 border-2 uppercase tracking-wide cursor-pointer select-none active:translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed ";
-const btnCls = (tone, extra) => BTN + ({
-  g: "border-emerald-500 text-emerald-400 bg-zinc-950 hover:bg-emerald-400 hover:text-zinc-950",
-  a: "border-amber-500 text-amber-400 bg-zinc-950 hover:bg-amber-400 hover:text-zinc-950",
-  c: "border-cyan-500 text-cyan-400 bg-zinc-950 hover:bg-cyan-400 hover:text-zinc-950",
-  r: "border-rose-500 text-rose-500 bg-zinc-950 hover:bg-rose-500 hover:text-zinc-950",
-  p: "border-purple-500 text-purple-400 bg-zinc-950 hover:bg-purple-400 hover:text-zinc-950",
-  z: "border-zinc-600 text-zinc-400 bg-zinc-950 hover:bg-zinc-800"
-}[tone] || "") + " " + (extra || "");
+const TONE_TO_BTN = {
+  g: "dt-btn-pri",
+  pri: "dt-btn-pri",
+  a: "dt-btn-sec",
+  sec: "dt-btn-sec",
+  c: "dt-btn-info",
+  info: "dt-btn-info",
+  p: "dt-btn-spec",
+  spec: "dt-btn-spec",
+  r: "dt-btn-danger",
+  danger: "dt-btn-danger",
+  z: ""
+};
 
-function Btn({ tone, onClick, children, disabled, title, extra, on }) {
+function Btn({ tone, size, onClick, children, disabled, title, extra, on }) {
+  const kindCls = TONE_TO_BTN[tone || "z"] || "";
+  const szCls = size === "sm" ? "dt-btn-sm" : size === "lg" ? "dt-btn-lg" : "";
   return h("button", {
     type: "button",
     title,
     disabled,
     onClick,
-    className: btnCls(tone || "g", extra) + (on ? " !bg-emerald-400 !text-zinc-950 font-bold" : "")
+    className: ["dt-btn", kindCls, szCls, on ? "dt-active" : "", extra || ""].filter(Boolean).join(" ")
   }, children);
 }
 
-function ConfirmBtn({ children, onConfirm, tone, ask, extra }) {
+function ConfirmBtn({ children, onConfirm, tone, size, ask, extra, title }) {
   const [a, setA] = useState(false);
   useEffect(() => {
     if (!a) return;
@@ -1179,19 +1234,22 @@ function ConfirmBtn({ children, onConfirm, tone, ask, extra }) {
     return () => clearTimeout(t);
   }, [a]);
   return h(Btn, {
-    tone: a ? "r" : tone || "z",
-    extra: (a ? "!bg-rose-500 !text-zinc-950 " : "") + (extra || ""),
+    tone: a ? "r" : (tone || "z"),
+    size,
+    title,
+    on: a,
+    extra,
     onClick: () => { if (a) { setA(false); onConfirm && onConfirm(); } else setA(true); }
-  }, a ? (ask || "CONFIRMAR?") : children);
+  }, a ? (ask || "Confirmar?") : children);
 }
 
-function TA({ value, onChange, label, placeholder, tone, warn500 }) {
+function TA({ value, onChange, label, placeholder, warn500 }) {
   const ref = useRef(null);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
-    el.style.height = (el.scrollHeight || 0) + 2 + "px";
+    el.style.height = Math.max(38, (el.scrollHeight || 0) + 2) + "px";
   });
   const len = S(value).length;
   return h("div", null,
@@ -1202,58 +1260,747 @@ function TA({ value, onChange, label, placeholder, tone, warn500 }) {
       placeholder,
       "aria-label": label,
       spellCheck: false,
-      className: "w-full block bg-zinc-950 border-2 " + (warn500 && len > 500 ? "border-rose-500" : "border-zinc-700") + " p-1 resize-none overflow-hidden focus:border-cyan-400 " + (tone || "text-emerald-300"),
+      className: "dt-input resize-none overflow-hidden block" + (warn500 && len > 500 ? " line-danger-solid" : ""),
       onChange: e => onChange && onChange(e.target.value)
     }),
-    warn500 && len > 420 && h("div", { className: "text-right text-sm " + (len > 500 ? "text-rose-500" : "text-amber-400") }, len + "/500 chars")
+    warn500 && len > 420 && h("div", { className: "text-right text-xs mt-0.5 " + (len > 500 ? "fg-danger" : "fg-sec") }, len + "/500 chars")
   );
 }
 
-const Lbl = ({ children, cls }) => h("div", { className: "text-zinc-500 uppercase text-sm mt-2 mb-0.5 " + (cls || "") }, children);
-const ExpBadge = ({ text }) => h("span", { className: "inline-block px-1 border border-amber-400 text-amber-400 text-sm uppercase tracking-wide" }, "🧪 " + (text || "EXPERIMENTAL"));
-const inpCls = "w-full bg-zinc-950 border-2 border-zinc-700 text-emerald-300 px-1 py-0 focus:border-cyan-400";
+const Lbl = ({ children, cls }) => h("label", { className: "block fg-2 font-semibold text-sm mb-1 " + (cls || "") }, children);
+
+function CondPicker({ cond, cfg, evs, onChange }) {
+  const c = normCond(cond);
+  const states = A(cfg?.estados_folha).map(e => e.nome);
+  const extras = A(cfg?.arvores_extras);
+
+  const setTipo = novoTipo => {
+    if (novoTipo === "npc_natureza") onChange({ tipo: novoTipo, op: "==", valor: "Sintético" });
+    else if (novoTipo === "visao_atual") onChange({ tipo: novoTipo, op: "==", valor: states[0] || "" });
+    else if (novoTipo === "possui_item") onChange({ tipo: novoTipo, op: "==", valor: evs[0]?.id || "EV-01" });
+    else if (novoTipo === "ferramenta_usada") onChange({ tipo: novoTipo, op: "==", valor: (extras[0]?.id || "vies").toLowerCase() });
+    else if (novoTipo === "desconfianca") onChange({ tipo: novoTipo, op: ">=", valor: "3" });
+    else onChange({ tipo: "custom", op: "==", valor: "" });
+  };
+
+  return h("div", { className: "space-y-1.5" },
+    h("select", {
+      className: "dt-input",
+      value: c.tipo,
+      onChange: e => setTipo(e.target.value)
+    }, COND_TYPES.map(([k, lbl]) => h("option", { key: k, value: k }, lbl))),
+
+    c.tipo === "npc_natureza" && h("div", { className: "grid grid-cols-[90px_1fr] gap-1.5" },
+      h("select", { className: "dt-input", value: c.op, onChange: e => onChange({ ...c, op: e.target.value }) },
+        h("option", { value: "==" }, "É (==)"),
+        h("option", { value: "!=" }, "Não é")
+      ),
+      h("select", { className: "dt-input", value: c.valor, onChange: e => onChange({ ...c, valor: e.target.value }) },
+        h("option", { value: "Sintético" }, "Sintético / IA"),
+        h("option", { value: "Humano" }, "Humano")
+      )
+    ),
+
+    c.tipo === "visao_atual" && h("div", { className: "grid grid-cols-[90px_1fr] gap-1.5" },
+      h("select", { className: "dt-input", value: c.op, onChange: e => onChange({ ...c, op: e.target.value }) },
+        h("option", { value: "==" }, "=="),
+        h("option", { value: "!=" }, "!=")
+      ),
+      states.length > 0
+        ? h("select", { className: "dt-input", value: c.valor, onChange: e => onChange({ ...c, valor: e.target.value }) },
+            states.map(s => h("option", { key: s, value: s }, s))
+          )
+        : h("input", { className: "dt-input", value: c.valor, placeholder: "Nome do estado…", onChange: e => onChange({ ...c, valor: e.target.value }) })
+    ),
+
+    c.tipo === "possui_item" && h("div", { className: "grid grid-cols-[105px_1fr] gap-1.5" },
+      h("select", { className: "dt-input", value: c.op, onChange: e => onChange({ ...c, op: e.target.value }) },
+        h("option", { value: "==" }, "Possui"),
+        h("option", { value: "!=" }, "Não tem")
+      ),
+      evs.length > 0
+        ? h("select", { className: "dt-input", value: c.valor, onChange: e => onChange({ ...c, valor: e.target.value }) },
+            ...(c.valor && !evs.some(x => x.id === c.valor) ? [h("option", { key: "_c", value: c.valor }, c.valor)] : []),
+            ...evs.map(e => h("option", { key: e.id, value: e.id }, e.id + (e.nome ? " · " + S(e.nome).slice(0, 20) : "")))
+          )
+        : h("input", { className: "dt-input", value: c.valor, placeholder: "Ex.: EV-01", onChange: e => onChange({ ...c, valor: e.target.value }) })
+    ),
+
+    c.tipo === "ferramenta_usada" && h("div", { className: "grid grid-cols-[90px_1fr] gap-1.5" },
+      h("select", { className: "dt-input", value: c.op, onChange: e => onChange({ ...c, op: e.target.value }) },
+        h("option", { value: "==" }, "=="),
+        h("option", { value: "!=" }, "!=")
+      ),
+      h("select", { className: "dt-input", value: c.valor, onChange: e => onChange({ ...c, valor: e.target.value }) },
+        ...extras.map(ex => h("option", { key: ex.id, value: ex.id.toLowerCase() }, ex.rotulo)),
+        ...(extras.length === 0 ? [h("option", { key: "v", value: "vies" }, "Viés"), h("option", { key: "i", value: "injecao" }, "Injeção")] : []),
+        h("option", { value: "qualquer" }, "Qualquer aba especial"),
+        h("option", { value: "nenhuma" }, "Nenhuma")
+      )
+    ),
+
+    c.tipo === "desconfianca" && h("div", { className: "grid grid-cols-[90px_1fr] gap-1.5" },
+      h("select", { className: "dt-input", value: c.op, onChange: e => onChange({ ...c, op: e.target.value }) },
+        NUM_OPS.map(op => h("option", { key: op, value: op }, op))
+      ),
+      h("input", { type: "number", min: 0, className: "dt-input", value: c.valor, onChange: e => onChange({ ...c, valor: e.target.value }) })
+    ),
+
+    c.tipo === "custom" && h("input", {
+      className: "dt-input",
+      value: c.valor,
+      placeholder: "Ex.: faccao == 'Rebeldes' && nivel >= 5",
+      onChange: e => onChange({ ...c, valor: e.target.value })
+    })
+  );
+}
 
 function Panel({ title, tone, right, defaultOpen, children }) {
   const [open, setOpen] = useState(defaultOpen !== false);
-  const c = { g: "text-emerald-400", a: "text-amber-400", c: "text-cyan-400", p: "text-purple-400", r: "text-rose-400" }[tone || "g"];
-  return h("section", { className: "border-2 border-zinc-700 bg-zinc-950 mb-4 dt-card-shadow" },
+  const c = { g: "fg-pri", a: "fg-sec", c: "fg-info", p: "fg-spec", r: "fg-danger" }[tone || "g"];
+  return h("section", { className: "dt-panel mb-4" },
     h("button", {
       type: "button",
       "aria-expanded": open,
       onClick: () => setOpen(!open),
-      className: "w-full flex justify-between items-center gap-3 px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 text-left cursor-pointer"
+      className: "w-full flex justify-between items-center gap-3 px-4 py-2.5 text-left cursor-pointer",
+      style: { backgroundColor: "var(--bg-elevated)", border: "none", color: "var(--fg-1)" }
     },
-      h("span", { className: "glow text-xl uppercase " + c }, "▌" + title),
-      h("span", { className: "flex gap-2 items-center text-zinc-500" }, right, open ? "[−]" : "[+]")
+      h("span", { className: "font-bold tracking-wide uppercase " + c }, title),
+      h("span", { className: "flex gap-3 items-center fg-2 text-sm" }, right, open ? "Ocultar" : "Expandir")
     ),
-    open && h("div", { className: "p-3 border-t-2 border-zinc-700" }, children)
+    open && h("div", { className: "p-4", style: { borderTop: "1px solid var(--border-1)" } }, children)
   );
 }
 
 /* ==========================================================================
-   PAINÉIS DE INVENTÁRIO, MÉTRICA GLOBAL E VALIDAÇÃO
+   TELA 1: MENU PRINCIPAL ("DIALOGUE TOOL")
    ========================================================================== */
-function Inventario({ data, cfg, updNpc }) {
+function TitleScreen({ reg, currentTheme, onThemeChange, onGoNewPapo, onContinuePapo, onSelectSavedPapo, onDeleteSavedPapo, onLoadFileText }) {
+  const fileRef = useRef(null);
+  const [showSaved, setShowSaved] = useState(false);
+  const [errMsg, setErrMsg] = useState("");
+  const lastSaved = reg.list.find(x => x.id === reg.activeId) || reg.list[0] || null;
+
+  const onPick = ev => {
+    const f = ev.target.files?.[0];
+    if (!f) return;
+    setErrMsg("");
+    const r = new FileReader();
+    r.onload = () => {
+      try { onLoadFileText(String(r.result || "")); }
+      catch (e) { setErrMsg(e && e.message ? e.message : "Não foi possível abrir este JSON."); }
+    };
+    r.readAsText(f, "utf-8");
+    ev.target.value = "";
+  };
+
+  return h("div", { className: "min-h-screen w-full dt-canvas flex flex-col items-center justify-center p-6" },
+    h("div", { className: "w-full max-w-xl dt-card p-8 md:p-10" },
+      /* Marca minimalista sem emojis */
+      h("div", { className: "flex items-center gap-3 mb-2 fg-pri" },
+        h(Icon, { name: "logo", size: 28 }),
+        h("span", { className: "text-xs font-bold uppercase tracking-widest fg-2" }, "Interactive Narrative Studio")
+      ),
+      h("div", { className: "pb-6 mb-6", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("h1", { className: "text-4xl md:text-5xl font-bold tracking-tight fg-1 m-0" }, "Dialogue Tool"),
+        h("p", { className: "fg-2 mt-2 text-base m-0" }, "Crie, ramifique, teste condicionais e exporte árvores de diálogo.")
+      ),
+
+      /* Botões estilo Menu de Jogo (com contraste 100% preservado no hover) */
+      h("div", { className: "space-y-3" },
+        lastSaved && h("button", {
+          type: "button",
+          onClick: () => onContinuePapo(lastSaved.id),
+          className: "dt-menu-action"
+        },
+          h("div", null,
+            h("div", { className: "text-lg font-bold fg-1 flex items-center gap-2" },
+              h(Icon, { name: "play", size: 15 }),
+              "Continuar Último Papo"
+            ),
+            h("div", { className: "text-sm fg-2 mt-0.5" }, lastSaved.nome + (lastSaved.updatedAt ? " · salvo às " + lastSaved.updatedAt : ""))
+          ),
+          h(Icon, { name: "arrow", size: 18 })
+        ),
+
+        h("button", {
+          type: "button",
+          onClick: onGoNewPapo,
+          className: "dt-menu-action sec"
+        },
+          h("div", null,
+            h("div", { className: "text-lg font-bold fg-1 flex items-center gap-2" },
+              h(Icon, { name: "plus", size: 16 }),
+              "Novo Papo"
+            ),
+            h("div", { className: "text-sm fg-2 mt-0.5" }, "Definir continuações, abas especiais, finais e iniciar projeto")
+          ),
+          h(Icon, { name: "arrow", size: 18 })
+        ),
+
+        h("input", { ref: fileRef, type: "file", accept: ".json,application/json", className: "hidden", onChange: onPick }),
+        h("button", {
+          type: "button",
+          onClick: () => fileRef.current && fileRef.current.click(),
+          className: "dt-menu-action info"
+        },
+          h("div", null,
+            h("div", { className: "text-lg font-bold fg-1 flex items-center gap-2" },
+              h(Icon, { name: "folder", size: 16 }),
+              "Carregar Papo"
+            ),
+            h("div", { className: "text-sm fg-2 mt-0.5" }, "Abrir arquivo .JSON salvo no computador")
+          ),
+          h(Icon, { name: "arrow", size: 18 })
+        ),
+
+        reg.list.length > 1 && h("div", { className: "pt-1" },
+          h(Btn, { tone: "z", extra: "w-full justify-between", onClick: () => setShowSaved(!showSaved) },
+            h("span", null, "Projetos salvos neste navegador (" + reg.list.length + ")"),
+            h("span", { className: "fg-3" }, showSaved ? "Ocultar" : "Mostrar")
+          )
+        )
+      ),
+
+      showSaved && reg.list.length > 0 && h("div", { className: "mt-3 p-2.5 space-y-1.5 max-h-48 overflow-auto rounded", style: { backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-1)" } },
+        reg.list.map(item =>
+          h("div", { key: item.id, className: "flex items-center justify-between gap-2 px-3 py-1.5 rounded", style: { backgroundColor: "var(--bg-elevated)" } },
+            h("button", {
+              type: "button",
+              onClick: () => onSelectSavedPapo(item.id),
+              className: "flex-1 text-left fg-1 font-medium hover:underline cursor-pointer bg-transparent border-0"
+            }, item.nome + " (" + (item.npcCount || 1) + " NPCs)"),
+            h(ConfirmBtn, { tone: "r", size: "sm", ask: "Apagar?", onConfirm: () => onDeleteSavedPapo(item.id) }, h(Icon, { name: "trash", size: 14 }))
+          )
+        )
+      ),
+
+      errMsg && h("div", { className: "mt-4 p-3 rounded tone-box-r fg-danger text-sm font-medium" }, errMsg),
+
+      h("div", { className: "mt-7 pt-5 flex flex-wrap items-center justify-between gap-3", style: { borderTop: "1px solid var(--border-1)" } },
+        h("span", { className: "fg-2 text-sm font-semibold" }, "Tema Visual"),
+        h("select", {
+          className: "dt-input !w-64",
+          value: currentTheme,
+          onChange: e => onThemeChange(e.target.value)
+        }, THEMES.map(t => h("option", { key: t.id, value: t.id }, t.label)))
+      )
+    )
+  );
+}
+
+/* ==========================================================================
+   TELA 2: CONFIGURAR NOVO PAPO (AMPLA, ACESSÍVEL, TEXTOS GRANDES E LEGÍVEIS)
+   ========================================================================== */
+function NewPapoScreen({ currentTheme, onThemeChange, onCancel, onConfirmCreate }) {
+  const [nome, setNome] = useState("Novo Papo");
+  const [numDias, setNumDias] = useState(6);
+  const [namingMode, setNamingMode] = useState("semanas");
+  const [falaMudaPorFinal, setFalaMudaPorFinal] = useState(true);
+
+  const [extras, setExtras] = useState(() => clone(makeTuringConfig().arvores_extras));
+  const [finais, setFinais] = useState(() => clone(makeTuringConfig().estados_folha));
+
+  const [usarMetrica, setUsarMetrica] = useState(true);
+  const [metricaNome, setMetricaNome] = useState("Autodesconfiança Global");
+  const [usarInventario, setUsarInventario] = useState(true);
+  const [usarVereditoMatriz, setUsarVereditoMatriz] = useState(true);
+  const [usarExportTxtC, setUsarExportTxtC] = useState(true);
+
+  const aplicarPresetTuring = () => {
+    const t = makeTuringConfig(currentTheme);
+    setNumDias(6);
+    setNamingMode("semanas");
+    setFalaMudaPorFinal(true);
+    setExtras(clone(t.arvores_extras));
+    setFinais(clone(t.estados_folha));
+    setUsarMetrica(true);
+    setMetricaNome("Autodesconfiança Global");
+    setUsarInventario(true);
+    setUsarVereditoMatriz(true);
+    setUsarExportTxtC(true);
+  };
+
+  const aplicarPresetSimples = () => {
+    setNumDias(1);
+    setNamingMode("papo");
+    setFalaMudaPorFinal(false);
+    setExtras([]);
+    setFinais([]);
+    setUsarMetrica(false);
+    setUsarInventario(false);
+    setUsarVereditoMatriz(false);
+    setUsarExportTxtC(false);
+  };
+
+  const setDiasSafe = v => setNumDias(Math.max(1, Math.min(20, Math.floor(+v || 1))));
+
+  const finalizar = () => {
+    const temFinais = finais.filter(f => S(f.nome).trim()).length > 0;
+    const abDin = !!(falaMudaPorFinal && numDias > 1 && temFinais);
+    const cfg = {
+      template: usarExportTxtC ? "turing_test" : "livre",
+      theme: currentTheme,
+      modulos: {
+        inventario: usarInventario,
+        metrica_global: usarMetrica,
+        aberturas_dinamicas: abDin,
+        matriz_transicao: usarVereditoMatriz && numDias > 1,
+        veredito: usarVereditoMatriz,
+        experimental: false,
+        export_turing_txt: usarExportTxtC
+      },
+      termos: {
+        npc_singular: "NPC",
+        npc_plural: "NPCs",
+        item_a: usarExportTxtC ? "Objeto" : "Item",
+        item_a_prefix: usarExportTxtC ? "EV" : "IT",
+        item_b: "Informação",
+        item_b_prefix: "INF",
+        metrica_nome: S(metricaNome).trim() || "Métrica Global"
+      },
+      estados_folha: finais.filter(f => S(f.nome).trim()),
+      cenas: buildScenesList(numDias, namingMode, abDin, usarVereditoMatriz),
+      arvores_extras: extras.filter(ex => S(ex.rotulo).trim()).map((ex, idx) => ({
+        id: S(ex.id).trim().toUpperCase() || ("EXTRA_" + (idx + 1)),
+        rotulo: S(ex.rotulo).trim(),
+        cor: oneOf(ex.cor, TONE_KEYS, "p"),
+        modo_raiz: ex.modo_raiz || "escolhas",
+        sub: S(ex.sub)
+      }))
+    };
+    onConfirmCreate(nome, cfg);
+  };
+
+  const previewCenas = buildScenesList(numDias, namingMode, false, false);
+
+  return h("div", { className: "min-h-screen w-full dt-canvas flex flex-col items-center py-10 px-4 md:px-8" },
+    h("div", { className: "w-full max-w-4xl dt-card p-6 md:p-10 space-y-7" },
+      /* Cabeçalho amplo */
+      h("div", { className: "flex flex-wrap items-start justify-between gap-4 pb-5", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("div", null,
+          h("h2", { className: "text-3xl font-bold fg-1 m-0" }, "Configurar Novo Papo"),
+          h("p", { className: "fg-2 text-base mt-1.5 m-0" }, "Defina a estrutura inicial do seu projeto. Tudo pode ser alterado depois diretamente pelas abas.")
+        ),
+        h("div", { className: "flex flex-wrap gap-2" },
+          h(Btn, { tone: "a", onClick: aplicarPresetTuring }, "Preencher Padrão TuringTest"),
+          h(Btn, { tone: "info", onClick: aplicarPresetSimples }, "Preencher Jogo Simples")
+        )
+      ),
+
+      /* 1. Identidade e Tema */
+      h("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-5" },
+        h("div", null,
+          h(Lbl, null, "Nome do Jogo / Projeto"),
+          h("input", { className: "dt-input dt-input-lg", value: nome, placeholder: "Ex.: Investigação Setor B / Crônicas...", onChange: e => setNome(e.target.value) })
+        ),
+        h("div", null,
+          h(Lbl, null, "Tema Visual"),
+          h("select", { className: "dt-input dt-input-lg", value: currentTheme, onChange: e => onThemeChange(e.target.value) },
+            THEMES.map(t => h("option", { key: t.id, value: t.id }, t.label))
+          )
+        )
+      ),
+
+      /* 2. Quantos dias / continuações de papo */
+      h("div", { className: "dt-panel p-5 space-y-4" },
+        h("div", { className: "flex flex-wrap items-center justify-between gap-4" },
+          h("div", null,
+            h("h3", { className: "text-xl font-bold fg-1 m-0" }, "Quantos dias ou continuações de papo?"),
+            h("p", { className: "text-base fg-2 mt-1 m-0" }, "Define quantas etapas de conversa cada NPC terá inicialmente.")
+          ),
+          h("div", { className: "flex items-center gap-2" },
+            h(Btn, { tone: "z", size: "lg", onClick: () => setDiasSafe(numDias - 1) }, h(Icon, { name: "minus", size: 16 })),
+            h("input", { type: "number", min: 1, max: 20, className: "dt-input dt-input-lg !w-20 text-center font-bold", value: numDias, onChange: e => setDiasSafe(e.target.value) }),
+            h(Btn, { tone: "z", size: "lg", onClick: () => setDiasSafe(numDias + 1) }, h(Icon, { name: "plus", size: 16 }))
+          )
+        ),
+
+        h("div", { className: "flex flex-wrap items-center gap-2 pt-1" },
+          h("span", { className: "fg-2 text-base mr-1" }, "Nomenclatura:"),
+          [
+            ["semanas", "Semanas (S1 · D1 ... S2 · D6)"],
+            ["dia", "Dias (Dia 1, Dia 2...)"],
+            ["papo", "Papos (Papo 1, Papo 2...)"],
+            ["cena", "Cenas (Cena 1, Cena 2...)"]
+          ].map(([k, lbl]) =>
+            h(Btn, { key: k, tone: "a", on: namingMode === k, onClick: () => setNamingMode(k) }, lbl)
+          )
+        ),
+
+        h("div", { className: "flex flex-wrap gap-2 pt-1" },
+          previewCenas.map(c =>
+            h("span", {
+              key: c.id,
+              className: "px-3 py-1 text-sm font-medium rounded",
+              style: { backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-2)" }
+            }, c.rotulo)
+          )
+        ),
+
+        numDias > 1 && finais.length > 0 && h("div", { className: "pt-4 flex flex-wrap items-center justify-between gap-3", style: { borderTop: "1px solid var(--border-1)" } },
+          h("span", { className: "text-base fg-1 font-medium" }, "A fala inicial do NPC muda conforme o final da conversa anterior?"),
+          h("div", { className: "flex gap-2" },
+            h(Btn, { tone: "g", on: falaMudaPorFinal, onClick: () => setFalaMudaPorFinal(true) }, "Sim (múltiplas aberturas)"),
+            h(Btn, { tone: "z", on: !falaMudaPorFinal, onClick: () => setFalaMudaPorFinal(false) }, "Não (fala inicial única)")
+          )
+        )
+      ),
+
+      /* 3. Abas Especiais */
+      h("div", { className: "dt-panel p-5 space-y-4" },
+        h("div", { className: "flex flex-wrap items-center justify-between gap-3" },
+          h("div", null,
+            h("h3", { className: "text-xl font-bold fg-1 m-0" }, "Abas Especiais por NPC"),
+            h("p", { className: "text-base fg-2 mt-1 m-0" }, "Árvores paralelas como Viés, Injeção, Loja ou Segredo. Remova as que não precisar.")
+          ),
+          extras.length > 0 && h(Btn, { tone: "r", size: "sm", onClick: () => setExtras([]) }, "Remover Todas")
+        ),
+
+        extras.length === 0 && h("div", { className: "p-3 rounded text-base fg-2", style: { backgroundColor: "var(--bg-elevated)", border: "1px dashed var(--border-2)" } },
+          "Nenhuma aba especial ativa — o projeto terá apenas as abas normais de conversa."
+        ),
+
+        h("div", { className: "space-y-2.5" },
+          extras.map((ex, i) =>
+            h("div", {
+              key: i,
+              className: "grid grid-cols-1 md:grid-cols-[200px_170px_1fr_auto] gap-2.5 items-center p-3 rounded",
+              style: { backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-1)" }
+            },
+              h("input", {
+                className: "dt-input",
+                value: ex.rotulo,
+                placeholder: "Nome da aba (ex.: Viés)",
+                onChange: e => setExtras(prev => { const c = clone(prev); c[i].rotulo = e.target.value; c[i].id = slug(e.target.value).toUpperCase() || ("EXTRA_" + (i + 1)); return c; })
+              }),
+              h("select", {
+                className: "dt-input",
+                value: ex.cor || "p",
+                onChange: e => setExtras(prev => { const c = clone(prev); c[i].cor = e.target.value; return c; })
+              }, TONE_KEYS.map(tk => h("option", { key: tk, value: tk }, TONE_MAP[tk].label))),
+              h("input", {
+                className: "dt-input",
+                value: ex.sub || "",
+                placeholder: "Regra ou observação opcional…",
+                onChange: e => setExtras(prev => { const c = clone(prev); c[i].sub = e.target.value; return c; })
+              }),
+              h(Btn, { tone: "r", onClick: () => setExtras(prev => prev.filter((_, ix) => ix !== i)) }, h(Icon, { name: "trash", size: 15 }), "Remover")
+            )
+          )
+        ),
+
+        h(Btn, {
+          tone: "p",
+          onClick: () => setExtras(prev => [...prev, { id: "ESPECIAL_" + (prev.length + 1), rotulo: "Especial " + (prev.length + 1), cor: "p", modo_raiz: "escolhas", sub: "" }])
+        }, h(Icon, { name: "plus", size: 15 }), "Adicionar Aba Especial")
+      ),
+
+      /* 4. Finais de Diálogo */
+      h("div", { className: "dt-panel p-5 space-y-4" },
+        h("div", { className: "flex flex-wrap items-center justify-between gap-3" },
+          h("div", null,
+            h("h3", { className: "text-xl font-bold fg-1 m-0" }, "Finais de Diálogo"),
+            h("p", { className: "text-base fg-2 mt-1 m-0" }, "Renomeie os tipos de final ou remova todos para encerrar diálogos sem categoria.")
+          ),
+          finais.length > 0 && h(Btn, { tone: "r", size: "sm", onClick: () => setFinais([]) }, "Remover Todos (Fim Simples)")
+        ),
+
+        finais.length === 0 && h("div", { className: "p-3 rounded text-base fg-pri", style: { backgroundColor: "var(--pri-soft)", border: "1px solid var(--pri)" } },
+          "Modo Fim Simples ativo: os nós finais encerram a conversa sem exigir classificação."
+        ),
+
+        h("div", { className: "space-y-2.5" },
+          finais.map((est, i) =>
+            h("div", { key: i, className: "grid grid-cols-1 md:grid-cols-[1fr_210px_auto] gap-2.5 items-center max-w-2xl" },
+              h("input", {
+                className: "dt-input",
+                value: est.nome,
+                placeholder: "Nome do final…",
+                onChange: e => setFinais(prev => { const c = clone(prev); c[i].nome = e.target.value; return c; })
+              }),
+              h("select", {
+                className: "dt-input",
+                value: est.cor,
+                onChange: e => setFinais(prev => { const c = clone(prev); c[i].cor = e.target.value; return c; })
+              }, TONE_KEYS.map(tk => h("option", { key: tk, value: tk }, TONE_MAP[tk].label))),
+              h(Btn, { tone: "r", onClick: () => setFinais(prev => prev.filter((_, ix) => ix !== i)) }, h(Icon, { name: "trash", size: 15 }), "Remover")
+            )
+          )
+        ),
+
+        h(Btn, {
+          tone: "g",
+          onClick: () => setFinais(prev => [...prev, { nome: "Final " + (prev.length + 1), cor: "c" }])
+        }, h(Icon, { name: "plus", size: 15 }), "Adicionar Tipo de Final")
+      ),
+
+      /* 5. Módulos Opcionais */
+      h("div", { className: "dt-panel p-5 space-y-4" },
+        h("div", null,
+          h("h3", { className: "text-xl font-bold fg-1 m-0" }, "Módulos Opcionais"),
+          h("p", { className: "text-base fg-2 mt-1 m-0" }, "Ative apenas os sistemas que fazem sentido para o seu jogo.")
+        ),
+        h("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3" },
+          [
+            [usarMetrica, () => setUsarMetrica(!usarMetrica), "Métrica Global entre NPCs", "Contador acumulativo compartilhado (ex.: Desconfiança, Karma)"],
+            [usarInventario, () => setUsarInventario(!usarInventario), "Inventário de Itens e Informações", "Permite escolhas bloqueadas por item e recompensas em nós"],
+            [usarVereditoMatriz, () => setUsarVereditoMatriz(!usarVereditoMatriz), "Veredito & Matriz de Transição", "Painéis de anotações de transição e julgamento final"],
+            [usarExportTxtC, () => setUsarExportTxtC(!usarExportTxtC), "Exportador TXT Motor C (TuringTest)", "Habilita validações de limite do C e exportação .txt específica"]
+          ].map(([val, fn, title, sub], idx) =>
+            h("button", {
+              key: idx,
+              type: "button",
+              onClick: fn,
+              className: "text-left p-3.5 rounded cursor-pointer flex items-start justify-between gap-3 transition-colors",
+              style: {
+                backgroundColor: val ? "var(--pri-soft)" : "var(--bg-elevated)",
+                border: "1px solid " + (val ? "var(--pri)" : "var(--border-2)"),
+                color: "var(--fg-1)"
+              }
+            },
+              h("div", null,
+                h("div", { className: "text-base font-bold fg-1" }, title),
+                h("div", { className: "text-sm fg-2 mt-0.5" }, sub)
+              ),
+              h("span", { className: "text-xs font-bold uppercase px-2 py-1 rounded shrink-0 " + (val ? "fg-pri" : "fg-3"), style: { border: "1px solid currentColor" } }, val ? "Ativo" : "Off")
+            )
+          )
+        ),
+        usarMetrica && h("div", { className: "pt-2 max-w-md" },
+          h(Lbl, null, "Nome da Métrica Global"),
+          h("input", { className: "dt-input", value: metricaNome, placeholder: "Ex.: Autodesconfiança Global / Karma...", onChange: e => setMetricaNome(e.target.value) })
+        )
+      ),
+
+      /* Rodapé */
+      h("div", { className: "flex flex-wrap justify-between items-center gap-4 pt-4", style: { borderTop: "1px solid var(--border-1)" } },
+        h(Btn, { tone: "z", size: "lg", onClick: onCancel }, h(Icon, { name: "back", size: 16 }), "Voltar ao Menu"),
+        h(Btn, { tone: "g", size: "lg", onClick: finalizar }, "Criar Papo e Abrir Editor", h(Icon, { name: "arrow", size: 17 }))
+      )
+    )
+  );
+}
+
+/* ==========================================================================
+   GAVETA INLINE DO ÍCONE DE LÁPIS NAS ABAS
+   ========================================================================== */
+function TabInlineEditor({ game, aba, updGame, onClose, onSelectAba, flash }) {
+  const cfg = game.config;
+  const scIdx = cfg.cenas.findIndex(c => c.id === aba);
+  const sc = scIdx >= 0 ? cfg.cenas[scIdx] : null;
+  const exIdx = !sc ? cfg.arvores_extras.findIndex(e => e.id === aba) : -1;
+  const ex = exIdx >= 0 ? cfg.arvores_extras[exIdx] : null;
+
+  if (!sc && !ex) return null;
+
+  if (ex) {
+    return h("div", { className: "px-4 py-3 flex flex-wrap items-center gap-2.5 text-sm", style: { backgroundColor: "var(--bg-elevated)", borderTop: "1px solid var(--border-1)" } },
+      h("span", { className: "fg-spec font-bold uppercase text-xs tracking-wide" }, "Editar Aba Especial:"),
+      h("input", {
+        className: "dt-input !w-44",
+        value: ex.rotulo,
+        placeholder: "Nome da aba",
+        onChange: e => updGame(g => { if (g.config.arvores_extras[exIdx]) g.config.arvores_extras[exIdx].rotulo = e.target.value; })
+      }),
+      h("select", {
+        className: "dt-input !w-44",
+        value: ex.cor || "p",
+        onChange: e => updGame(g => { if (g.config.arvores_extras[exIdx]) g.config.arvores_extras[exIdx].cor = e.target.value; })
+      }, TONE_KEYS.map(tk => h("option", { key: tk, value: tk }, TONE_MAP[tk].label))),
+      h("select", {
+        className: "dt-input !w-56",
+        value: ex.modo_raiz || "escolhas",
+        onChange: e => updGame(g => { if (g.config.arvores_extras[exIdx]) g.config.arvores_extras[exIdx].modo_raiz = e.target.value; })
+      },
+        h("option", { value: "escolhas" }, "Início: Direto nas escolhas"),
+        h("option", { value: "fala" }, "Início: Fala normal do NPC")
+      ),
+      h("input", {
+        className: "dt-input flex-1 min-w-[180px]",
+        value: ex.sub || "",
+        placeholder: "Descrição ou regra desta aba…",
+        onChange: e => updGame(g => { if (g.config.arvores_extras[exIdx]) g.config.arvores_extras[exIdx].sub = e.target.value; })
+      }),
+      h(Btn, {
+        tone: "c",
+        size: "sm",
+        onClick: () => {
+          let newId = "";
+          updGame(g => {
+            const orig = g.config.arvores_extras[exIdx];
+            if (!orig) return;
+            let k = 2;
+            newId = orig.id + "_" + k;
+            while (g.config.arvores_extras.some(z => z.id === newId)) { k += 1; newId = orig.id + "_" + k; }
+            g.config.arvores_extras.push({ ...clone(orig), id: newId, rotulo: orig.rotulo + " " + k });
+            g.npcs.forEach(np => {
+              np.extras[newId] = clone(np.extras[orig.id] || { nos: [N("Raiz", orig.rotulo, "", [])] });
+            });
+          });
+          if (newId) onSelectAba(newId);
+          flash("Aba especial duplicada.");
+        }
+      }, "Duplicar"),
+      h(ConfirmBtn, {
+        tone: "r",
+        size: "sm",
+        ask: "Deletar '" + ex.rotulo + "'?",
+        onConfirm: () => {
+          const fallbackAba = cfg.cenas[0]?.id || "D1";
+          updGame(g => {
+            g.config.arvores_extras.splice(exIdx, 1);
+            g.npcs.forEach(np => { if (np.aba === ex.id) np.aba = fallbackAba; });
+          });
+          onClose();
+          flash("Aba especial removida.");
+        }
+      }, h(Icon, { name: "trash", size: 13 }), "Deletar Aba"),
+      h(Btn, { tone: "z", size: "sm", onClick: onClose }, h(Icon, { name: "close", size: 13 }))
+    );
+  }
+
+  return h("div", { className: "px-4 py-3 flex flex-wrap items-center gap-2.5 text-sm", style: { backgroundColor: "var(--bg-elevated)", borderTop: "1px solid var(--border-1)" } },
+    h("span", { className: "fg-sec font-bold uppercase text-xs tracking-wide" }, "Editar Etapa:"),
+    h("input", {
+      className: "dt-input !w-44",
+      value: sc.rotulo,
+      placeholder: "Nome da etapa",
+      onChange: e => updGame(g => { if (g.config.cenas[scIdx]) g.config.cenas[scIdx].rotulo = e.target.value; })
+    }),
+    h("input", {
+      className: "dt-input !w-32",
+      value: sc.grupo || "",
+      placeholder: "Grupo (S1)",
+      onChange: e => updGame(g => { if (g.config.cenas[scIdx]) g.config.cenas[scIdx].grupo = e.target.value; })
+    }),
+    cfg.estados_folha.length > 0 && h(Btn, {
+      tone: "a",
+      size: "sm",
+      on: sc.aberturas && cfg.modulos.aberturas_dinamicas,
+      onClick: () => updGame(g => {
+        const next = !(g.config.cenas[scIdx].aberturas && g.config.modulos.aberturas_dinamicas);
+        g.config.cenas[scIdx].aberturas = next;
+        if (next) g.config.modulos.aberturas_dinamicas = true;
+      })
+    }, sc.aberturas && cfg.modulos.aberturas_dinamicas ? "Abertura por final anterior: Sim" : "Abertura por final anterior: Não"),
+    h(Btn, {
+      tone: "c",
+      size: "sm",
+      extra: "ml-auto",
+      onClick: () => {
+        let newId = "";
+        updGame(g => {
+          const orig = g.config.cenas[scIdx];
+          if (!orig) return;
+          let k = g.config.cenas.length + 1;
+          newId = "PAPO_" + k;
+          while (g.config.cenas.some(z => z.id === newId)) { k += 1; newId = "PAPO_" + k; }
+          g.config.cenas.push({ ...clone(orig), id: newId, rotulo: orig.rotulo + " (Cópia)" });
+          g.npcs.forEach(np => {
+            np.cenas[newId] = clone(np.cenas[orig.id] || { nos: [N("Entrada", "Abertura", "", [])], matriz: [], veredito: null });
+          });
+        });
+        if (newId) onSelectAba(newId);
+        flash("Etapa duplicada.");
+      }
+    }, "Duplicar Etapa"),
+    cfg.cenas.length > 1 && h(ConfirmBtn, {
+      tone: "r",
+      size: "sm",
+      ask: "Deletar '" + sc.rotulo + "'?",
+      onConfirm: () => {
+        const fallback = cfg.cenas.find((_, ix) => ix !== scIdx)?.id || "D1";
+        updGame(g => {
+          g.config.cenas.splice(scIdx, 1);
+          g.npcs.forEach(np => { if (np.aba === sc.id) np.aba = fallback; });
+        });
+        onClose();
+        flash("Etapa removida.");
+      }
+    }, h(Icon, { name: "trash", size: 13 }), "Deletar Etapa"),
+    h(Btn, { tone: "z", size: "sm", onClick: onClose }, h(Icon, { name: "close", size: 13 }))
+  );
+}
+
+/* ==========================================================================
+   MODAL PARA EDITAR / REMOVER FINAIS DE DIÁLOGO
+   ========================================================================== */
+function EndingsEditModal({ game, updGame, onClose }) {
+  const finais = game.config.estados_folha;
+  useEffect(() => {
+    const f = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, []);
+
+  const renomearFinal = (idx, novoNome) => updGame(g => {
+    const velho = g.config.estados_folha[idx]?.nome;
+    if (!g.config.estados_folha[idx]) return;
+    g.config.estados_folha[idx].nome = novoNome;
+    if (velho && novoNome) {
+      g.npcs.forEach(np => allTreesOfNpc(np, g.config).forEach(([, nos]) =>
+        nos.forEach(n => { if (n.folha && n.folha.visao_jogador === velho) n.folha.visao_jogador = novoNome; })
+      ));
+    }
+  });
+
+  return h("div", { className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
+    h("div", { className: "w-full max-w-xl dt-card p-6 space-y-4", onClick: e => e.stopPropagation() },
+      h("div", { className: "flex justify-between items-center pb-3", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("h3", { className: "text-xl font-bold fg-1 m-0" }, "Editar Finais de Diálogo"),
+        h(Btn, { tone: "z", size: "sm", onClick: onClose }, h(Icon, { name: "close", size: 15 }))
+      ),
+      h("p", { className: "text-sm fg-2 m-0" }, "Renomeie os tipos de final ou remova todos para usar um fim de diálogo simples."),
+      finais.length === 0 && h("div", { className: "p-3 rounded text-sm fg-pri tone-box-g", style: { border: "1px solid var(--pri)" } },
+        "Modo Fim Simples ativo (sem categorias)."
+      ),
+      h("div", { className: "space-y-2" },
+        finais.map((est, i) =>
+          h("div", { key: i, className: "grid grid-cols-[1fr_180px_38px] gap-2 items-center" },
+            h("input", { className: "dt-input", value: est.nome, onChange: e => renomearFinal(i, e.target.value) }),
+            h("select", { className: "dt-input", value: est.cor, onChange: e => updGame(g => { g.config.estados_folha[i].cor = e.target.value; }) },
+              TONE_KEYS.map(tk => h("option", { key: tk, value: tk }, TONE_MAP[tk].label))
+            ),
+            h(Btn, { tone: "r", size: "sm", onClick: () => updGame(g => { g.config.estados_folha.splice(i, 1); }) }, h(Icon, { name: "trash", size: 14 }))
+          )
+        )
+      ),
+      h("div", { className: "flex flex-wrap gap-2 pt-2" },
+        h(Btn, { tone: "g", onClick: () => updGame(g => { g.config.estados_folha.push({ nome: "Final " + (g.config.estados_folha.length + 1), cor: "c" }); }) },
+          h(Icon, { name: "plus", size: 14 }), "Adicionar Final"
+        ),
+        finais.length > 0 && h(ConfirmBtn, {
+          tone: "r",
+          ask: "Remover todas as categorias?",
+          onConfirm: () => updGame(g => { g.config.estados_folha = []; g.config.modulos.aberturas_dinamicas = false; })
+        }, "Usar Fim Simples (Remover Todos)")
+      )
+    )
+  );
+}
+
+/* ==========================================================================
+   PAINÉIS INFERIORES DE APOIO
+   ========================================================================== */
+function Inventario({ data, cfg, updNpc, onDisableModule }) {
   const evs = A(data?.evidencias);
-  const ids = evs.map(e => e.id);
-  const nObj = evs.filter(e => e.tipo !== "informacao").length;
-  const nInf = evs.filter(e => e.tipo === "informacao").length;
-  const termA = cfg.termos.item_a || "Objeto";
+  const termA = cfg.termos.item_a || "Item";
   const termB = cfg.termos.item_b || "Informação";
   const prefA = cfg.termos.item_a_prefix || "EV";
   const prefB = cfg.termos.item_b_prefix || "INF";
 
   return h(Panel, {
-    title: "INVENTÁRIO E CONDIÇÕES (" + termA.toUpperCase() + "S & " + termB.toUpperCase() + "S)",
+    title: "Inventário (" + termA + "s & " + termB + "s)",
     tone: "c",
     defaultOpen: false,
-    right: h("span", { className: "text-cyan-400" }, nObj + " " + termA.toLowerCase() + " · " + nInf + " " + termB.toLowerCase())
+    right: h("span", { className: "fg-info font-semibold" }, evs.length + " itens")
   },
-    h("p", { className: "text-zinc-500 text-sm mb-2" }, "Cadastre itens/provas e flags/informações usados para desbloquear escolhas condicionais (REQ) ou concedidos em nós. Renomear um ID atualiza todas as árvores deste personagem."),
     evs.map((e, i) =>
-      h("div", { key: i, className: "g5 mb-1" },
+      h("div", { key: i, className: "g5 mb-2 items-center" },
         h("input", {
-          className: inpCls + (e.id && ids.indexOf(e.id) !== i ? " !border-rose-500" : ""),
+          className: "dt-input",
           value: e.id,
           placeholder: prefA + "-01",
           onChange: ev => {
@@ -1275,51 +2022,50 @@ function Inventario({ data, cfg, updNpc }) {
           }
         }),
         h("select", {
-          className: inpCls + (e.tipo === "informacao" ? " !text-purple-300" : " !text-cyan-300"),
+          className: "dt-input",
           value: e.tipo,
           onChange: ev => updNpc(d => { if (d.evidencias[i]) d.evidencias[i].tipo = ev.target.value; })
         },
-          h("option", { value: "evidencia" }, "📦 " + termA),
-          h("option", { value: "informacao" }, "💬 " + termB)
+          h("option", { value: "evidencia" }, termA),
+          h("option", { value: "informacao" }, termB)
         ),
         h("input", {
-          className: inpCls,
+          className: "dt-input",
           value: e.nome,
           placeholder: "Nome / descrição",
           onChange: ev => updNpc(d => { if (d.evidencias[i]) d.evidencias[i].nome = ev.target.value; })
         }),
         h("input", {
-          className: inpCls,
+          className: "dt-input",
           value: e.local,
-          placeholder: "Origem / anotação",
+          placeholder: "Origem / observação",
           onChange: ev => updNpc(d => { if (d.evidencias[i]) d.evidencias[i].local = ev.target.value; })
         }),
-        h("button", {
-          type: "button",
-          className: btnCls("r", "!px-0"),
-          onClick: () => updNpc(d => { d.evidencias.splice(i, 1); })
-        }, "X")
+        h(Btn, { tone: "r", size: "sm", onClick: () => updNpc(d => { d.evidencias.splice(i, 1); }) }, h(Icon, { name: "close", size: 13 }))
       )
     ),
-    h("div", { className: "mt-2 flex gap-2 flex-wrap" },
-      h(Btn, {
-        tone: "c",
-        onClick: () => updNpc(d => {
-          let k = 1;
-          const u = new Set(d.evidencias.map(x => x.id));
-          while (u.has(prefA + "-" + String(k).padStart(2, "0"))) k += 1;
-          d.evidencias.push({ id: prefA + "-" + String(k).padStart(2, "0"), nome: "", local: "", tipo: "evidencia" });
-        })
-      }, "+ " + termA.toUpperCase()),
-      h(Btn, {
-        tone: "p",
-        onClick: () => updNpc(d => {
-          let k = 1;
-          const u = new Set(d.evidencias.map(x => x.id));
-          while (u.has(prefB + "-" + String(k).padStart(2, "0"))) k += 1;
-          d.evidencias.push({ id: prefB + "-" + String(k).padStart(2, "0"), nome: "", local: "", tipo: "informacao" });
-        })
-      }, "+ " + termB.toUpperCase())
+    h("div", { className: "mt-3 flex justify-between gap-2 flex-wrap" },
+      h("div", { className: "flex gap-2 flex-wrap" },
+        h(Btn, {
+          tone: "c",
+          onClick: () => updNpc(d => {
+            let k = 1;
+            const u = new Set(d.evidencias.map(x => x.id));
+            while (u.has(prefA + "-" + String(k).padStart(2, "0"))) k += 1;
+            d.evidencias.push({ id: prefA + "-" + String(k).padStart(2, "0"), nome: "", local: "", tipo: "evidencia" });
+          })
+        }, h(Icon, { name: "plus", size: 14 }), "Adicionar " + termA),
+        h(Btn, {
+          tone: "p",
+          onClick: () => updNpc(d => {
+            let k = 1;
+            const u = new Set(d.evidencias.map(x => x.id));
+            while (u.has(prefB + "-" + String(k).padStart(2, "0"))) k += 1;
+            d.evidencias.push({ id: prefB + "-" + String(k).padStart(2, "0"), nome: "", local: "", tipo: "informacao" });
+          })
+        }, h(Icon, { name: "plus", size: 14 }), "Adicionar " + termB)
+      ),
+      h(ConfirmBtn, { tone: "z", size: "sm", ask: "Ocultar Inventário?", onConfirm: onDisableModule }, "Ocultar Inventário")
     )
   );
 }
@@ -1327,7 +2073,6 @@ function Inventario({ data, cfg, updNpc }) {
 function MetricaGlobal({ game, updGame, onJumpNpc }) {
   const cfg = game.config;
   const m = game.metricas.desconfianca;
-  const ico = cfg.termos.metrica_icone || "👁";
   const mNome = cfg.termos.metrica_nome || "Métrica Global";
 
   let totalGlobal = 0;
@@ -1344,41 +2089,45 @@ function MetricaGlobal({ game, updGame, onJumpNpc }) {
   });
 
   return h(Panel, {
-    title: ico + " MÉTRICA GLOBAL · " + mNome.toUpperCase(),
+    title: "Métrica Global · " + mNome,
     tone: "r",
     defaultOpen: false,
-    right: h("span", { className: totalGlobal >= m.limite ? "text-emerald-400" : "text-amber-400" }, "Soma no jogo: " + totalGlobal + " / Limite: " + m.limite)
+    right: h("span", { className: "font-semibold " + (totalGlobal >= m.limite ? "fg-pri" : "fg-sec") }, totalGlobal + " / " + m.limite)
   },
-    h("div", { className: "flex gap-2 items-center mb-2" },
-      h("span", { className: "text-zinc-400" }, "Limite para consequência:"),
-      h("input", {
-        type: "number",
-        min: 1,
-        className: inpCls + " !w-20",
-        value: m.limite,
-        onChange: e => updGame(g => { g.metricas.desconfianca.limite = Math.max(1, +e.target.value || 3); })
-      })
+    h("div", { className: "flex flex-wrap gap-3 items-center mb-3 justify-between" },
+      h("div", { className: "flex flex-wrap gap-2 items-center" },
+        h("input", { className: "dt-input !w-60", value: mNome, placeholder: "Nome da métrica", onChange: e => updGame(g => { g.config.termos.metrica_nome = e.target.value; }) }),
+        h("span", { className: "fg-2 text-sm ml-1" }, "Limite:"),
+        h("input", {
+          type: "number",
+          min: 1,
+          className: "dt-input !w-20",
+          value: m.limite,
+          onChange: e => updGame(g => { g.metricas.desconfianca.limite = Math.max(1, +e.target.value || 3); })
+        })
+      ),
+      h(ConfirmBtn, {
+        tone: "r",
+        size: "sm",
+        ask: "Remover Métrica Global?",
+        onConfirm: () => updGame(g => { g.config.modulos.metrica_global = false; })
+      }, h(Icon, { name: "trash", size: 13 }), "Remover Métrica Global")
     ),
-    h(Lbl, null, "Consequência ao atingir o limite"),
     h(TA, {
       value: m.consequencia,
       label: "Consequência global",
-      tone: "text-amber-300",
-      placeholder: "Descreva o efeito narrativo ou sistêmico ao atingir o limite…",
+      placeholder: "Descreva o que acontece no jogo ao atingir o limite…",
       onChange: t => updGame(g => { g.metricas.desconfianca.consequencia = t; })
     }),
-    h("div", { className: "mt-2 flex flex-wrap gap-1.5 items-center" },
-      h("span", { className: "text-zinc-400 text-sm" }, "Nós que somam " + ico + ":"),
-      fontes.length
-        ? fontes.map((f, i) =>
-            h("button", {
-              key: i,
-              type: "button",
-              onClick: () => onJumpNpc(f.npcIdx, f.aba, f.nodeId),
-              className: "px-2 py-0.5 border border-rose-500 bg-rose-950/40 text-rose-300 hover:bg-rose-500 hover:text-zinc-950 text-sm cursor-pointer"
-            }, f.npcNome + " · " + f.aba + " · " + f.nodeId + " (+" + f.val + ")")
-          )
-        : h("span", { className: "text-zinc-500 text-sm" }, "Nenhum nó marcado ainda.")
+    fontes.length > 0 && h("div", { className: "mt-3 flex flex-wrap gap-2 items-center" },
+      fontes.map((f, i) =>
+        h(Btn, {
+          key: i,
+          tone: "r",
+          size: "sm",
+          onClick: () => onJumpNpc(f.npcIdx, f.aba, f.nodeId)
+        }, f.npcNome + " · " + f.aba + " · " + f.nodeId + " (+" + f.val + ")")
+      )
     )
   );
 }
@@ -1386,36 +2135,30 @@ function MetricaGlobal({ game, updGame, onJumpNpc }) {
 function Validacao({ data, cfg, onJump }) {
   const { warns, infos } = validarNpc(data, cfg);
   return h(Panel, {
-    title: "VALIDAÇÃO · " + (warns.length ? warns.length + " AVISOS" : "ZERO AVISOS"),
+    title: "Validação · " + (warns.length ? warns.length + " pendência(s)" : "Sem pendências"),
     tone: warns.length ? "a" : "g",
     defaultOpen: warns.length > 0
   },
-    warns.length === 0 && h("div", { className: "text-emerald-400 mb-1" }, "✔ Nenhum problema estrutural encontrado nas árvores preenchidas."),
-    warns.slice(0, 100).map((w, i) =>
-      h("div", { key: i, className: "flex items-center justify-between gap-2 py-0.5 border-b border-zinc-800/80 hover:bg-zinc-900 px-1" },
-        h("span", { className: "text-amber-300" }, "⚠ [" + w.label + "] " + w.msg),
-        w.aba && h("button", {
-          type: "button",
-          onClick: () => onJump(w.aba, w.nodeId),
-          className: "shrink-0 px-1.5 py-0 border border-cyan-500 text-cyan-400 hover:bg-cyan-400 hover:text-zinc-950 text-sm uppercase cursor-pointer"
-        }, "IR ➔")
+    warns.length === 0 && h("div", { className: "fg-pri flex items-center gap-2 font-medium" }, h(Icon, { name: "check", size: 16 }), "Nenhuma inconsistência estrutural encontrada."),
+    h("div", { className: "space-y-1.5" },
+      warns.slice(0, 100).map((w, i) =>
+        h("div", { key: i, className: "flex items-center justify-between gap-3 py-1.5 px-2.5 rounded", style: { backgroundColor: "var(--bg-elevated)" } },
+          h("span", { className: "fg-sec text-sm flex items-center gap-2" }, h(Icon, { name: "alert", size: 14 }), "[" + w.label + "] " + w.msg),
+          w.aba && h(Btn, { tone: "c", size: "sm", onClick: () => onJump(w.aba, w.nodeId) }, "Focar nó")
+        )
       )
     ),
     infos.map((inf, i) =>
-      h("div", { key: "i" + i, className: "flex items-center justify-between gap-2 py-0.5 mt-1 text-zinc-400 px-1" },
-        h("span", null, "ℹ [" + inf.label + "] " + inf.msg),
-        h("button", {
-          type: "button",
-          onClick: () => onJump(inf.aba, inf.nodeId),
-          className: "shrink-0 px-1.5 py-0 border border-zinc-600 text-zinc-400 hover:bg-zinc-800 text-sm uppercase cursor-pointer"
-        }, "ABRIR")
+      h("div", { key: "i" + i, className: "flex items-center justify-between gap-2 pt-2 mt-2 fg-2 text-sm" },
+        h("span", null, "[" + inf.label + "] " + inf.msg),
+        h(Btn, { tone: "z", size: "sm", onClick: () => onJump(inf.aba, inf.nodeId) }, "Abrir")
       )
     )
   );
 }
 
 /* ==========================================================================
-   CARTÃO DE NÓ E ÁRVORE VISUAL
+   CARTÃO DE NÓ REFINADO E LIMPO
    ========================================================================== */
 const novoId = (nos, pai) => {
   const base = pai === "Entrada" || pai === "Raiz" ? "A" : pai;
@@ -1427,31 +2170,34 @@ const novoId = (nos, pai) => {
   return base + "." + k;
 };
 
-const PRESETS_ROTA = [
-  ["Confianca_D1_D2", "Confiança acumulada D1+D2"],
-  ["Pressao_D1_D2", "Caminho de Pressão (D1+D2)"],
-  ["Duvida_D1_D2", "Caminho de Dúvida (D1+D2)"]
-];
-const rotaNome = k => { const f = PRESETS_ROTA.find(x => x[0] === k); return f ? f[1] : k; };
+const novoIfId = (nos, pai) => {
+  const base = pai === "Entrada" || pai === "Raiz" ? "IF" : pai + ".IF";
+  const u = new Set(A(nos).map(n => n.id));
+  let k = 1;
+  while (u.has(base + k)) k += 1;
+  return base + k;
+};
 
-function NodeCard({ n, nos, evs, cfg, isRoot, aba, npcId, updNode, updDia, selected, onSel, onJumpNode }) {
-  const isLeaf = !!n?.folha;
+function NodeCard({ n, nos, evs, cfg, isRoot, aba, updNode, updDia, selected, onSel, onJumpNode, onOpenEndingsModal }) {
+  const isIfNode = !!n?.condicional;
+  const isLeaf = !isIfNode && !!n?.folha;
   const sc = cfg.cenas.find(c => c.id === aba);
+  const ex = !sc ? cfg.arvores_extras.find(e => e.id === aba) : null;
   const isScene = !!sc;
-  const usesAberturas = !!(isScene && sc.aberturas && cfg.modulos.aberturas_dinamicas && isRoot);
-  const isToolRoot = !isScene && isRoot;
+  const usesAberturas = !!(isScene && sc.aberturas && cfg.modulos.aberturas_dinamicas && cfg.estados_folha.length > 0 && isRoot && !isIfNode);
+  const rootChoicesOnly = !isScene && isRoot && ex?.modo_raiz !== "fala";
   const warn500 = !!cfg.modulos.export_turing_txt;
 
   const v = isLeaf ? n.folha.visao_jogador : null;
   const vTone = isLeaf ? stateTone(cfg, v) : TONE_MAP.a;
   const conf = n?.confronto_evidencia || null;
-  const secreta = S(n?.trava_rota_secreta);
   const recompensa = S(n?.evidencia_desbloqueada);
   const outros = nos.filter(x => x.id !== n.id);
   const usados = A(n.desbloqueios).map(x => x.ev);
   const livres = evs.filter(e => e.id && !usados.includes(e.id));
 
   const [draft, setDraft] = useState(null);
+  const [showMet, setShowMet] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [idDraft, setIdDraft] = useState(n.id);
 
@@ -1462,22 +2208,43 @@ function NodeCard({ n, nos, evs, cfg, isRoot, aba, npcId, updNode, updDia, selec
 
   const destOpts = (val, vazio) => [
     h("option", { key: "_", value: "" }, vazio),
-    ...(val && !outros.some(z => z.id === val) ? [h("option", { key: "_x", value: val }, val + " (inexistente!)")] : []),
+    ...(val && !outros.some(z => z.id === val) ? [h("option", { key: "_x", value: val }, val + " (inexistente)")] : []),
     ...outros.map(z => h("option", { key: z.id, value: z.id }, "-> " + z.id))
   ];
 
   const evOpts = (val, vazio) => [
     h("option", { key: "_", value: "" }, vazio),
-    ...(val && !evs.some(e => e.id === val) ? [h("option", { key: "_x", value: val }, val + " (não cadastrado!)")] : []),
-    ...evs.filter(e => e.id).map(e => h("option", { key: e.id, value: e.id }, (e.tipo === "informacao" ? "💬 " : "📦 ") + e.id + " · " + S(e.nome).slice(0, 24)))
+    ...(val && !evs.some(e => e.id === val) ? [h("option", { key: "_x", value: val }, val + " (não cadastrado)")] : []),
+    ...evs.filter(e => e.id).map(e => h("option", { key: e.id, value: e.id }, e.id + (e.nome ? " · " + S(e.nome).slice(0, 22) : "")))
   ];
 
-  const criarFilho = (i, comoFolha) => updDia(d => {
+  const criarFilhoOpcao = (i, modo) => updDia(d => {
     const pai = d.nos.find(z => z.id === n.id);
     if (!pai || !pai.opcoes[i]) return;
+    if (modo === "if") {
+      const ifId = novoIfId(d.nos, pai.id);
+      const vId = ifId + ".V", fId = ifId + ".F";
+      d.nos.push(IFN(ifId, defaultCond(), vId, fId, "Desvio IF"));
+      d.nos.push(N(vId, "Ramo Verdadeiro", "", []));
+      d.nos.push(N(fId, "Ramo Falso", "", []));
+      pai.opcoes[i].proximo_no = ifId;
+      return;
+    }
     const id = novoId(d.nos, pai.id);
-    d.nos.push(comoFolha ? L(id, "", defState) : N(id, "Ramo", "", []));
+    d.nos.push(modo === "folha" ? L(id, "", defState) : N(id, "", "", []));
     pai.opcoes[i].proximo_no = id;
+  });
+
+  const criarFilhoIfBranch = (ramo, comoFolha) => updDia(d => {
+    const me = d.nos.find(z => z.id === n.id);
+    if (!me || !me.condicional) return;
+    const suf = ramo === "se_verdadeiro" ? ".V" : ".F";
+    const u = new Set(d.nos.map(z => z.id));
+    let id = me.id + suf;
+    let k = 2;
+    while (u.has(id)) { id = me.id + suf + k; k += 1; }
+    d.nos.push(comoFolha ? L(id, "", defState) : N(id, ramo === "se_verdadeiro" ? "Ramo Verdadeiro" : "Ramo Falso", "", []));
+    me.condicional[ramo] = id;
   });
 
   const salvarNovoId = () => {
@@ -1493,11 +2260,14 @@ function NodeCard({ n, nos, evs, cfg, isRoot, aba, npcId, updNode, updDia, selec
       d.nos.forEach(z => {
         z.opcoes.forEach(o => { if (o.proximo_no === old) o.proximo_no = nv; });
         z.desbloqueios.forEach(x => { if (x.no === old) x.no = nv; });
+        if (z.condicional) {
+          if (z.condicional.se_verdadeiro === old) z.condicional.se_verdadeiro = nv;
+          if (z.condicional.se_falso === old) z.condicional.se_falso = nv;
+        }
       });
     });
   };
 
-  const abrirConfronto = () => setDraft(draft ? null : { ev: livres[0]?.id || "", pergunta: "", reacao: "" });
   const gerarConfronto = () => {
     if (!draft) return;
     const ev = draft.ev || livres[0]?.id;
@@ -1510,7 +2280,7 @@ function NodeCard({ n, nos, evs, cfg, isRoot, aba, npcId, updNode, updDia, selec
       if (d.nos.some(z => z.id === id)) return;
       const a = id + ".1", b = id + ".2";
       const s2 = cfg.estados_folha[2]?.nome || defState;
-      d.nos.push(N(id, "Reação · " + ev, reacao, [OP("", a, ""), OP("", b, "")], {
+      d.nos.push(N(id, "Reação " + ev, reacao, [OP("", a, ""), OP("", b, "")], {
         confronto_evidencia: { evidencia_id: ev, pergunta_jogador: pergunta, resposta_npc: reacao }
       }));
       d.nos.push(L(a, "", defState));
@@ -1533,14 +2303,11 @@ function NodeCard({ n, nos, evs, cfg, isRoot, aba, npcId, updNode, updDia, selec
     d.nos.forEach(z => {
       z.opcoes.forEach(o => { if (rm.has(o.proximo_no)) o.proximo_no = ""; });
       z.desbloqueios = z.desbloqueios.filter(y => !rm.has(y.no));
+      if (z.condicional) {
+        if (rm.has(z.condicional.se_verdadeiro)) z.condicional.se_verdadeiro = "";
+        if (rm.has(z.condicional.se_falso)) z.condicional.se_falso = "";
+      }
     });
-  });
-
-  const trocarEvidenciaConfronto = novo => updDia(d => {
-    const me = d.nos.find(z => z.id === n.id);
-    if (!me || !me.confronto_evidencia) return;
-    me.confronto_evidencia.evidencia_id = novo;
-    d.nos.forEach(z => z.desbloqueios.forEach(x => { if (x.no === n.id) x.ev = novo; }));
   });
 
   const excluir = () => updDia(d => {
@@ -1550,304 +2317,387 @@ function NodeCard({ n, nos, evs, cfg, isRoot, aba, npcId, updNode, updDia, selec
     d.nos.forEach(z => {
       z.opcoes.forEach(o => { if (rm.has(o.proximo_no)) o.proximo_no = ""; });
       z.desbloqueios = z.desbloqueios.filter(x => !rm.has(x.no));
+      if (z.condicional) {
+        if (rm.has(z.condicional.se_verdadeiro)) z.condicional.se_verdadeiro = "";
+        if (rm.has(z.condicional.se_falso)) z.condicional.se_falso = "";
+      }
     });
   });
 
-  const border = secreta ? "border-amber-400" : conf ? "border-cyan-400" : isLeaf ? vTone.b : selected ? "border-cyan-400" : "border-zinc-600";
-  const sombra = selected ? " dt-sel-shadow" : " dt-card-shadow";
-  const presetVal = !secreta ? "" : PRESETS_ROTA.some(x => x[0] === secreta) ? secreta : "__custom";
-  const recompensaIsInf = recompensa && evs.some(e => e.id === recompensa && e.tipo === "informacao");
-  const isHardcodedMaria = cfg.template === "turing_test" && npcId === "maria" && aba === "D3" && n.id === "B.2.1";
-  const metIcon = cfg.termos.metrica_icone || "👁";
+  const cardToneCls = isIfNode ? "tone-box-p" : isLeaf ? vTone.boxCls : "";
+  const metVisible = cfg.modulos.metrica_global && !rootChoicesOnly && (n.desconfianca > 0 || showMet);
 
   return h("div", {
     "data-node": n.id,
-    style: { minWidth: 336, width: 336 },
+    style: { minWidth: 356, width: 356 },
     onClick: e => { e.stopPropagation(); onSel(); },
-    className: "relative z-10 border-2 p-2 " + border + " " + (isLeaf ? vTone.bg : "bg-zinc-900") + sombra
+    className: "relative z-10 dt-card p-3.5 " + cardToneCls + (selected ? " dt-card-selected" : "")
   },
-    secreta && h("div", { className: "-mx-2 -mt-2 mb-2 px-2 py-0.5 bg-amber-400 text-zinc-950 uppercase text-sm font-bold", title: secreta }, "🧪🔑 ROTA SECRETA · " + rotaNome(secreta)),
-    isHardcodedMaria && h("div", { className: "-mx-2 -mt-2 mb-2 px-2 py-0.5 bg-cyan-950 border-b border-cyan-500 text-cyan-300 text-sm" }, "⚙ ID 'B.2.1' referenciado em gameplay_scene.c"),
+    isIfNode && h("div", { className: "flex items-center justify-between mb-2 pb-1.5 fg-spec text-xs font-bold uppercase tracking-wider", style: { borderBottom: "1px solid var(--border-1)" } },
+      h("span", { className: "flex items-center gap-1.5" }, h(Icon, { name: "branch", size: 14 }), "Desvio Condicional [IF]"),
+      h("span", { className: "fg-3" }, "Auto")
+    ),
 
-    /* Cabeçalho */
-    h("div", { className: "flex gap-1.5 items-center mb-1 flex-wrap" },
+    /* Cabeçalho do Cartão */
+    h("div", { className: "flex gap-2 items-center mb-2.5" },
       renaming
         ? h("div", { className: "flex gap-1 items-center" },
             h("input", {
-              className: inpCls + " !w-24",
+              className: "dt-input !w-24 !py-0.5 text-sm",
               value: idDraft,
               autoFocus: true,
               onKeyDown: e => { if (e.key === "Enter") salvarNovoId(); if (e.key === "Escape") setRenaming(false); },
               onChange: e => setIdDraft(e.target.value)
             }),
-            h(Btn, { tone: "g", extra: "!px-1", onClick: salvarNovoId }, "OK")
+            h(Btn, { tone: "g", size: "sm", onClick: salvarNovoId }, "OK")
           )
-        : h("span", {
-            className: "border-2 border-zinc-600 px-1 text-zinc-200 bg-zinc-950 " + (!isRoot ? "cursor-pointer hover:border-cyan-400" : ""),
-            title: isRoot ? "Nó raiz fixo" : "Clique para renomear o ID do nó",
-            onClick: () => { if (!isRoot) { setIdDraft(n.id); setRenaming(true); } }
-          }, n.id + (!isRoot ? " ✎" : "")),
+        : h("button", {
+            type: "button",
+            disabled: isRoot,
+            title: isRoot ? "Nó inicial fixo" : "Clique para renomear ID",
+            onClick: () => { if (!isRoot) { setIdDraft(n.id); setRenaming(true); } },
+            className: "px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1 " + (!isRoot ? "cursor-pointer" : "cursor-default"),
+            style: { backgroundColor: "var(--bg-input)", border: "1px solid var(--border-2)", color: "var(--fg-1)" }
+          }, n.id, !isRoot && h(Icon, { name: "edit", size: 11 })),
       h("input", {
-        className: "flex-1 min-w-0 bg-transparent border-0 border-b-2 border-dashed border-zinc-700 text-emerald-300 uppercase",
+        className: "flex-1 min-w-0 bg-transparent border-0 text-sm fg-2 focus:outline-none",
+        style: { borderBottom: "1px dashed var(--border-2)" },
         value: n.rotulo,
-        placeholder: "Rótulo",
+        placeholder: "nota / rótulo…",
         onChange: e => updNode(n.id, x => { x.rotulo = e.target.value; })
       }),
-      conf && h("span", { className: "text-cyan-400 text-sm" }, "🔍" + S(conf.evidencia_id)),
-      recompensa && h("span", { className: (recompensaIsInf ? "text-purple-300" : "text-amber-300") + " text-sm", title: "Concede " + recompensa }, (recompensaIsInf ? "💬+" : "📦+") + recompensa),
-      n.desconfianca > 0 && h("span", { className: "text-rose-400 text-sm font-bold" }, metIcon + "+" + n.desconfianca)
+      !isRoot && h(ConfirmBtn, { tone: "r", size: "sm", ask: "Excluir?", onConfirm: excluir, title: "Excluir este nó" }, h(Icon, { name: "trash", size: 13 }))
     ),
 
-    /* Confronto recebido */
-    conf && h("div", { className: "mb-2 border-2 border-cyan-900 p-1.5 bg-zinc-950" },
-      h("div", { className: "text-cyan-400 uppercase text-sm" }, "🔍 Escolha condicional (REQ)"),
-      h(Lbl, { cls: "!mt-1" }, "Item / Flag exigido"),
-      h("select", {
-        className: inpCls,
-        value: S(conf.evidencia_id),
-        onChange: e => trocarEvidenciaConfronto(e.target.value)
-      }, evOpts(S(conf.evidencia_id), "Escolha…")),
-      h(Lbl, null, "Fala / pergunta do jogador"),
-      h(TA, {
-        value: conf.pergunta_jogador,
-        label: "Pergunta " + n.id,
-        warn500,
-        tone: !S(conf.pergunta_jogador).trim() ? "text-rose-400 !border-rose-500" : "text-cyan-300",
-        placeholder: "O que o jogador diz nesta escolha condicional…",
-        onChange: t => updNode(n.id, x => { if (x.confronto_evidencia) x.confronto_evidencia.pergunta_jogador = t; })
-      })
-    ),
-
-    /* Fala(s) do NPC */
-    usesAberturas
-      ? h("div", { className: "border-2 border-amber-500 p-1.5 mb-1 bg-zinc-950" },
-          h("div", { className: "text-amber-400 uppercase text-sm mb-1" }, "🗣 Falas de abertura · por estado anterior"),
-          cfg.estados_folha.map(est => {
-            const sk = stateKey(est.nome);
-            const tn = TONE_MAP[est.cor] || TONE_MAP.a;
-            const isDef = est.nome === defState;
-            return h("div", { key: sk, className: "mb-1.5 last:mb-0" },
-              h("div", { className: "text-sm " + tn.t }, "■ " + est.nome + (isDef ? " (padrão)" : "")),
-              h(TA, {
-                value: n.aberturas?.[sk] || "",
-                label: "Abertura " + est.nome,
-                warn500,
-                tone: tn.t,
-                placeholder: "Fala inicial se veio de " + est.nome + "…",
-                onChange: t => updNode(n.id, x => {
-                  if (!x.aberturas) x.aberturas = {};
-                  x.aberturas[sk] = t;
-                  if (isDef) x.fala_npc = t;
-                })
-              })
-            );
-          })
-        )
-      : h("div", null,
-          h(Lbl, { cls: "!mt-0" }, isToolRoot ? "Nota de contexto (jogador inicia escolhendo abaixo)" : conf ? "Fala de reação" : "Fala do personagem"),
-          h(TA, {
-            value: n.fala_npc,
-            label: "Fala " + n.id,
-            warn500,
-            tone: isToolRoot ? "text-zinc-400" : undefined,
-            placeholder: isToolRoot ? "(Contexto da árvore especial)" : "O que o personagem diz…",
-            onChange: t => updNode(n.id, x => {
-              x.fala_npc = t;
-              if (x.confronto_evidencia) x.confronto_evidencia.resposta_npc = t;
+    /* MODO 1: NÓ DESVIADOR IF */
+    isIfNode
+      ? h("div", { className: "space-y-2.5" },
+          h("div", { className: "p-2.5 rounded", style: { backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-2)" } },
+            h("div", { className: "fg-spec text-xs uppercase font-bold mb-1.5" }, "Se a condição for:"),
+            h(CondPicker, {
+              cond: n.condicional.cond,
+              cfg,
+              evs,
+              onChange: nv => updNode(n.id, x => { if (x.condicional) x.condicional.cond = nv; })
             })
-          })
-        ),
-
-    /* Folha vs Opções */
-    isLeaf
-      ? h("div", { className: "mt-2" },
-          h(Lbl, null, !isScene ? "Estado final (prioritário)" : "Estado / Resultado da folha"),
-          h("select", {
-            className: inpCls + " " + vTone.t,
-            value: v,
-            onChange: e => updNode(n.id, x => { if (x.folha) x.folha.visao_jogador = e.target.value; })
-          }, stateNames.map(k => h("option", { key: k, value: k }, k)))
+          ),
+          h("div", { className: "p-2.5 rounded tone-box-g", style: { border: "1px solid var(--pri)" } },
+            h("div", { className: "fg-pri text-xs font-bold uppercase mb-1.5" }, "Então (Verdadeiro):"),
+            h("select", {
+              className: "dt-input",
+              value: n.condicional.se_verdadeiro || "",
+              onChange: e => updNode(n.id, x => { if (x.condicional) x.condicional.se_verdadeiro = e.target.value; })
+            }, destOpts(n.condicional.se_verdadeiro, "-> escolha destino")),
+            h("div", { className: "mt-1.5 flex flex-wrap gap-1.5" },
+              h(Btn, { tone: "z", size: "sm", onClick: () => criarFilhoIfBranch("se_verdadeiro", false) }, "+ Sub-nó"),
+              h(Btn, { tone: "g", size: "sm", onClick: () => criarFilhoIfBranch("se_verdadeiro", true) }, "+ Fim"),
+              n.condicional.se_verdadeiro && outros.some(z => z.id === n.condicional.se_verdadeiro) && h(Btn, { tone: "c", size: "sm", onClick: () => onJumpNode(n.condicional.se_verdadeiro) }, "Focar")
+            )
+          ),
+          h("div", { className: "p-2.5 rounded tone-box-r", style: { border: "1px solid var(--danger)" } },
+            h("div", { className: "fg-danger text-xs font-bold uppercase mb-1.5" }, "Senão (Falso):"),
+            h("select", {
+              className: "dt-input",
+              value: n.condicional.se_falso || "",
+              onChange: e => updNode(n.id, x => { if (x.condicional) x.condicional.se_falso = e.target.value; })
+            }, destOpts(n.condicional.se_falso, "-> escolha destino")),
+            h("div", { className: "mt-1.5 flex flex-wrap gap-1.5" },
+              h(Btn, { tone: "z", size: "sm", onClick: () => criarFilhoIfBranch("se_falso", false) }, "+ Sub-nó"),
+              h(Btn, { tone: "g", size: "sm", onClick: () => criarFilhoIfBranch("se_falso", true) }, "+ Fim"),
+              n.condicional.se_falso && outros.some(z => z.id === n.condicional.se_falso) && h(Btn, { tone: "c", size: "sm", onClick: () => onJumpNode(n.condicional.se_falso) }, "Focar")
+            )
+          ),
+          h(Btn, { tone: "z", size: "sm", extra: "w-full", onClick: () => updNode(n.id, x => { x.condicional = null; }) }, "Voltar para Nó de Fala")
         )
+
+      /* MODO 2: NÓ DE FALA / OPÇÕES / FIM */
       : h("div", null,
-          warn500 && totalChoices > 4 && h("div", { className: "mt-1.5 px-1.5 py-0.5 border border-rose-500 bg-rose-950/50 text-rose-300 text-sm" }, "⚠ " + totalChoices + "/4 escolhas (MAX_CHOICES=4 no C)"),
-          A(n.opcoes).map((o, i) =>
-            h("div", { key: i, "data-opt": n.id + "|" + i, className: "border-t-2 border-dashed border-zinc-700 mt-2 pt-1" },
-              h("div", { className: "grid grid-cols-[24px_1fr_26px] gap-1 items-start" },
-                h("span", { className: "bg-emerald-500 text-zinc-950 text-center font-bold" }, LET[i] || "?"),
-                h(TA, {
-                  value: o.texto,
-                  label: "Opção " + (LET[i] || i),
-                  warn500,
-                  placeholder: "Escolha do jogador…",
-                  onChange: t => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].texto = t; })
-                }),
-                h("button", {
-                  type: "button",
-                  className: btnCls("r", "!px-0"),
-                  onClick: () => updNode(n.id, x => { x.opcoes.splice(i, 1); })
-                }, "X")
-              ),
-              h("div", { className: "grid grid-cols-[112px_1fr] gap-1 mt-1 ml-6" },
-                h("select", {
-                  className: inpCls + (!o.proximo_no ? " !border-amber-500" : ""),
-                  value: o.proximo_no || "",
-                  onChange: e => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].proximo_no = e.target.value; })
-                }, destOpts(o.proximo_no, "-> destino")),
-                h("input", {
-                  className: inpCls,
-                  value: o.efeito,
-                  placeholder: "nota / tag (opcional)",
-                  onChange: e => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].efeito = e.target.value; })
+          conf && h("div", { className: "mb-2.5 p-2.5 rounded tone-box-c", style: { border: "1px solid var(--info)" } },
+            h("div", { className: "fg-info uppercase text-xs font-bold mb-1.5" }, "Escolha com Item (" + S(conf.evidencia_id) + ")"),
+            h("select", {
+              className: "dt-input mb-1.5",
+              value: S(conf.evidencia_id),
+              onChange: e => {
+                const novo = e.target.value;
+                updDia(d => {
+                  const me = d.nos.find(z => z.id === n.id);
+                  if (!me || !me.confronto_evidencia) return;
+                  me.confronto_evidencia.evidencia_id = novo;
+                  d.nos.forEach(z => z.desbloqueios.forEach(x => { if (x.no === n.id) x.ev = novo; }));
+                });
+              }
+            }, evOpts(S(conf.evidencia_id), "Selecione item…")),
+            h(TA, {
+              value: conf.pergunta_jogador,
+              label: "Pergunta " + n.id,
+              warn500,
+              placeholder: "Fala do jogador ao usar o item…",
+              onChange: t => updNode(n.id, x => { if (x.confronto_evidencia) x.confronto_evidencia.pergunta_jogador = t; })
+            })
+          ),
+
+          usesAberturas
+            ? h("div", { className: "p-2.5 rounded mb-2.5", style: { backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-2)" } },
+                h("div", { className: "fg-sec uppercase text-xs font-bold mb-2" }, "Falas iniciais por final anterior"),
+                cfg.estados_folha.map(est => {
+                  const sk = stateKey(est.nome);
+                  const tn = TONE_MAP[est.cor] || TONE_MAP.a;
+                  const isDef = est.nome === defState;
+                  return h("div", { key: sk, className: "mb-2 last:mb-0" },
+                    h("div", { className: "text-xs font-semibold mb-0.5 " + tn.textCls }, est.nome + (isDef ? " (padrão)" : "")),
+                    h(TA, {
+                      value: n.aberturas?.[sk] || "",
+                      label: "Abertura " + est.nome,
+                      warn500,
+                      placeholder: "Fala inicial se veio de " + est.nome + "…",
+                      onChange: t => updNode(n.id, x => {
+                        if (!x.aberturas) x.aberturas = {};
+                        x.aberturas[sk] = t;
+                        if (isDef) x.fala_npc = t;
+                      })
+                    })
+                  );
                 })
+              )
+            : rootChoicesOnly
+              ? h("div", { className: "text-xs fg-2 mb-2 px-2.5 py-2 rounded", style: { backgroundColor: "var(--bg-surface)", border: "1px dashed var(--border-2)" } },
+                  "Inicia direto nas escolhas do jogador abaixo (altere no ícone de lápis da aba se preferir fala inicial)."
+                )
+              : h("div", null,
+                  h("div", { className: "text-xs font-semibold fg-2 uppercase mb-1" }, A(n.fala_condicional).length ? "Fala padrão do NPC (Senão)" : "Fala do NPC"),
+                  h(TA, {
+                    value: n.fala_npc,
+                    label: "Fala " + n.id,
+                    warn500,
+                    placeholder: "Escreva a fala do NPC…",
+                    onChange: t => updNode(n.id, x => {
+                      x.fala_npc = t;
+                      if (x.confronto_evidencia) x.confronto_evidencia.resposta_npc = t;
+                    })
+                  })
+                ),
+
+          /* Variantes de fala IF */
+          A(n.fala_condicional).map((fc, fi) =>
+            h("div", { key: fi, className: "mt-2 p-2.5 rounded tone-box-p", style: { border: "1px solid var(--spec)" } },
+              h("div", { className: "flex justify-between items-center mb-1.5" },
+                h("span", { className: "fg-spec text-xs uppercase font-bold" }, "Mudar fala SE:"),
+                h(Btn, { tone: "r", size: "sm", onClick: () => updNode(n.id, x => { x.fala_condicional.splice(fi, 1); }) }, h(Icon, { name: "close", size: 12 }))
               ),
-              h("div", { className: "ml-6 mt-1 flex flex-wrap gap-1" },
-                h(Btn, { tone: "z", extra: "text-sm !px-1.5", onClick: () => criarFilho(i, false) }, "+ SUB-NÓ"),
-                h(Btn, { tone: "g", extra: "text-sm !px-1.5", onClick: () => criarFilho(i, true) }, "+ FOLHA"),
-                o.proximo_no && outros.some(z => z.id === o.proximo_no) && h(Btn, {
-                  tone: "c",
-                  extra: "text-sm !px-1.5",
-                  onClick: () => onJumpNode(o.proximo_no)
-                }, "↳ " + o.proximo_no)
+              h(CondPicker, {
+                cond: fc.cond,
+                cfg,
+                evs,
+                onChange: nv => updNode(n.id, x => { if (x.fala_condicional[fi]) x.fala_condicional[fi].cond = nv; })
+              }),
+              h("div", { className: "mt-1.5" },
+                h(TA, {
+                  value: fc.fala,
+                  label: "Fala condicional",
+                  warn500,
+                  placeholder: "Fala alternativa do NPC…",
+                  onChange: t => updNode(n.id, x => { if (x.fala_condicional[fi]) x.fala_condicional[fi].fala = t; })
+                })
               )
             )
           ),
-          h("div", { className: "mt-2 flex gap-2 flex-wrap items-center" },
-            A(n.opcoes).length < 8 && h(Btn, {
-              tone: "g",
-              onClick: () => updNode(n.id, x => { x.opcoes.push(OP("", "", "")); })
-            }, "+ OPÇÃO")
-          ),
-          A(n.opcoes).length === 0 && A(n.desbloqueios).length === 0 && h("div", { className: "mt-1.5 flex items-center justify-between gap-2 border border-rose-500 bg-rose-950/30 px-1.5 py-1" },
-            h("span", { className: "text-rose-400 text-sm" }, "⚠ Beco sem saída"),
-            !isRoot && h(Btn, {
-              tone: "a",
-              extra: "text-sm !px-1.5",
-              onClick: () => updNode(n.id, x => { x.folha = { visao_jogador: defState }; if (!x.rotulo || x.rotulo === "Ramo") x.rotulo = "Final"; })
-            }, "VIRAR FOLHA")
-          )
-        ),
 
-    /* Confrontos condicionais (se módulo inventário ativo) */
-    cfg.modulos.inventario && !isLeaf && h("div", { className: "mt-2 border-2 border-cyan-900 p-1.5 bg-zinc-950" },
-      A(n.desbloqueios).map((x, i) =>
-        h("div", { key: i, className: "flex items-center gap-1 mb-1 text-cyan-300 text-sm" },
-          h("button", {
-            type: "button",
-            onClick: () => onJumpNode(x.no),
-            className: "flex-1 text-left hover:underline cursor-pointer"
-          }, "🔍 REQ " + x.ev + " → " + x.no),
-          h("button", { type: "button", className: btnCls("r", "!px-1"), onClick: () => removerConfronto(i) }, "X")
-        )
-      ),
-      h(Btn, {
-        tone: "c",
-        extra: "w-full text-sm",
-        onClick: abrirConfronto,
-        disabled: !draft && !livres.length,
-        title: !livres.length ? "Cadastre itens no inventário abaixo primeiro" : ""
-      }, draft ? "[ CANCELAR ]" : "[ 🔍+ ESCOLHA CONDICIONAL / CONFRONTO ]"),
-      draft && h("div", { className: "mt-1" },
-        h(Lbl, { cls: "!mt-1" }, "Item / Flag exigido"),
-        h("select", {
-          className: inpCls,
-          value: draft.ev || livres[0]?.id || "",
-          onChange: e => setDraft({ ...draft, ev: e.target.value })
-        }, livres.map(e => h("option", { key: e.id, value: e.id }, (e.tipo === "informacao" ? "💬 " : "📦 ") + e.id + " · " + S(e.nome).slice(0, 26)))),
-        h(Lbl, null, "Fala / pergunta do jogador"),
-        h(TA, { value: draft.pergunta, label: "Pergunta", warn500, tone: "text-cyan-300", onChange: t => setDraft({ ...draft, pergunta: t }) }),
-        h(Lbl, null, "Fala de reação"),
-        h(TA, { value: draft.reacao, label: "Reação", warn500, onChange: t => setDraft({ ...draft, reacao: t }) }),
-        h("div", { className: "mt-2" }, h(Btn, { tone: "c", onClick: gerarConfronto }, "GERAR GALHO"))
-      )
-    ),
+          /* FIM DE DIÁLOGO vs OPÇÕES */
+          isLeaf
+            ? h("div", { className: "mt-3 pt-2.5", style: { borderTop: "1px solid var(--border-1)" } },
+                cfg.estados_folha.length > 0
+                  ? h("div", { className: "flex items-center gap-2" },
+                      h("span", { className: "text-xs font-bold fg-2 uppercase shrink-0" }, "Final:"),
+                      h("select", {
+                        className: "dt-input flex-1 font-semibold",
+                        value: v || defState,
+                        onChange: e => updNode(n.id, x => { if (x.folha) x.folha.visao_jogador = e.target.value; })
+                      }, stateNames.map(k => h("option", { key: k, value: k }, k))),
+                      h(Btn, { tone: "z", size: "sm", onClick: onOpenEndingsModal, title: "Editar tipos de final" }, h(Icon, { name: "edit", size: 13 }))
+                    )
+                  : h("div", { className: "flex items-center justify-between gap-2 px-2.5 py-1.5 rounded", style: { backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-2)" } },
+                      h("span", { className: "fg-pri text-xs font-bold uppercase tracking-wide" }, "Fim do Diálogo"),
+                      h(Btn, { tone: "z", size: "sm", onClick: onOpenEndingsModal }, h(Icon, { name: "edit", size: 12 }), "Finais")
+                    )
+              )
+            : h("div", null,
+                warn500 && totalChoices > 4 && h("div", { className: "mt-2 px-2.5 py-1 rounded tone-box-r fg-danger text-xs font-medium" }, totalChoices + "/4 escolhas (limite MAX_CHOICES=4 no C)"),
+                A(n.opcoes).map((o, i) =>
+                  h("div", { key: i, "data-opt": n.id + "|" + i, className: "mt-2.5 pt-2.5", style: { borderTop: "1px dashed var(--border-2)" } },
+                    h("div", { className: "grid grid-cols-[26px_1fr_28px] gap-1.5 items-start" },
+                      h("span", {
+                        className: "h-7 flex items-center justify-center rounded text-xs font-bold",
+                        style: { backgroundColor: "var(--pri-soft)", color: "var(--pri)", border: "1px solid var(--pri)" }
+                      }, LET[i] || "?"),
+                      h(TA, {
+                        value: o.texto,
+                        label: "Opção " + (LET[i] || i),
+                        warn500,
+                        placeholder: "Escolha do jogador…",
+                        onChange: t => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].texto = t; })
+                      }),
+                      h(Btn, { tone: "r", size: "sm", extra: "!px-1.5 h-7", onClick: () => updNode(n.id, x => { x.opcoes.splice(i, 1); }) }, h(Icon, { name: "close", size: 13 }))
+                    ),
+                    o.cond && h("div", { className: "ml-8 mt-1.5 p-2 rounded tone-box-p", style: { border: "1px solid var(--spec)" } },
+                      h("div", { className: "flex justify-between items-center mb-1" },
+                        h("span", { className: "fg-spec text-xs uppercase font-bold" }, "Exibir opção somente SE:"),
+                        h(Btn, { tone: "r", size: "sm", onClick: () => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].cond = null; }) }, h(Icon, { name: "close", size: 12 }))
+                      ),
+                      h(CondPicker, {
+                        cond: o.cond,
+                        cfg,
+                        evs,
+                        onChange: nv => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].cond = nv; })
+                      })
+                    ),
+                    h("div", { className: "ml-8 mt-1.5 flex flex-wrap items-center gap-1.5" },
+                      h("select", {
+                        className: "dt-input !w-36 !py-1 text-sm",
+                        value: o.proximo_no || "",
+                        onChange: e => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].proximo_no = e.target.value; })
+                      }, destOpts(o.proximo_no, "-> destino")),
+                      !o.proximo_no && h(Btn, { tone: "z", size: "sm", onClick: () => criarFilhoOpcao(i, "sub") }, "+ Sub-nó"),
+                      !o.proximo_no && h(Btn, { tone: "g", size: "sm", onClick: () => criarFilhoOpcao(i, "folha") }, "+ Fim"),
+                      !o.proximo_no && h(Btn, { tone: "p", size: "sm", onClick: () => criarFilhoOpcao(i, "if") }, h(Icon, { name: "branch", size: 12 }), "+IF"),
+                      o.proximo_no && outros.some(z => z.id === o.proximo_no) && h(Btn, { tone: "c", size: "sm", onClick: () => onJumpNode(o.proximo_no) }, "Focar"),
+                      !o.cond && h(Btn, { tone: "p", size: "sm", onClick: () => updNode(n.id, x => { if (x.opcoes[i]) x.opcoes[i].cond = defaultCond(); }), title: "Exibir esta escolha somente sob uma condição IF" }, "IF?")
+                    )
+                  )
+                ),
 
-    /* Recompensa de nó (se inventário ativo) */
-    cfg.modulos.inventario && !isToolRoot && h("div", { className: "mt-2" },
-      recompensa
-        ? h("div", { className: "flex gap-1 items-center" },
-            h("span", { className: "text-amber-300 whitespace-nowrap text-sm" }, recompensaIsInf ? "💬+" : "📦+"),
+                A(n.desbloqueios).map((x, i) =>
+                  h("div", { key: "db" + i, className: "mt-2 flex items-center gap-2 rounded px-2.5 py-1.5 tone-box-c text-xs", style: { border: "1px solid var(--info)" } },
+                    h("button", { type: "button", onClick: () => onJumpNode(x.no), className: "flex-1 text-left fg-info font-semibold hover:underline cursor-pointer bg-transparent border-0" }, "REQ " + x.ev + " -> " + x.no),
+                    h(Btn, { tone: "r", size: "sm", onClick: () => removerConfronto(i) }, h(Icon, { name: "close", size: 12 }))
+                  )
+                ),
+
+                draft && h("div", { className: "mt-2.5 p-2.5 rounded tone-box-c space-y-1.5", style: { border: "1px solid var(--info)" } },
+                  h("div", { className: "flex justify-between items-center" },
+                    h("span", { className: "fg-info text-xs font-bold uppercase" }, "Nova escolha com Item"),
+                    h(Btn, { tone: "z", size: "sm", onClick: () => setDraft(null) }, h(Icon, { name: "close", size: 12 }))
+                  ),
+                  livres.length > 0
+                    ? h("div", { className: "space-y-1.5" },
+                        h("select", { className: "dt-input", value: draft.ev || livres[0]?.id || "", onChange: e => setDraft({ ...draft, ev: e.target.value }) },
+                          livres.map(e => h("option", { key: e.id, value: e.id }, e.id + (e.nome ? " · " + S(e.nome).slice(0, 22) : "")))
+                        ),
+                        h(TA, { value: draft.pergunta, label: "Pergunta", warn500, placeholder: "Fala do jogador…", onChange: t => setDraft({ ...draft, pergunta: t }) }),
+                        h(TA, { value: draft.reacao, label: "Reação", warn500, placeholder: "Resposta do NPC…", onChange: t => setDraft({ ...draft, reacao: t }) }),
+                        h(Btn, { tone: "c", size: "sm", extra: "w-full", onClick: gerarConfronto }, "Criar Galho")
+                      )
+                    : h("div", { className: "text-xs fg-2" }, "Cadastre um item no painel Inventário abaixo primeiro.")
+                )
+              ),
+
+          /* Recompensa ativa */
+          cfg.modulos.inventario && recompensa && h("div", { className: "mt-2.5 flex gap-2 items-center rounded px-2.5 py-1.5 tone-box-a", style: { border: "1px solid var(--sec)" } },
+            h("span", { className: "fg-sec text-xs font-bold shrink-0" }, "Ganha:"),
             h("select", {
-              className: inpCls,
+              className: "dt-input !py-1 text-xs",
               value: recompensa,
               onChange: e => updNode(n.id, x => { x.evidencia_desbloqueada = e.target.value; })
-            }, evOpts(recompensa, "Escolha…").slice(1)),
-            h("button", { type: "button", className: btnCls("r", "!px-1"), onClick: () => updNode(n.id, x => { x.evidencia_desbloqueada = ""; }) }, "X")
+            }, evOpts(recompensa, "Item…").slice(1)),
+            h(Btn, { tone: "r", size: "sm", onClick: () => updNode(n.id, x => { x.evidencia_desbloqueada = ""; }) }, h(Icon, { name: "close", size: 12 }))
+          ),
+
+          /* Métrica ativa */
+          metVisible && h("div", { className: "mt-2.5 flex gap-2 items-center justify-between rounded px-2.5 py-1.5 tone-box-r", style: { border: "1px solid var(--danger)" } },
+            h("span", { className: "fg-danger text-xs font-bold" }, (cfg.termos.metrica_nome || "Métrica") + " +"),
+            h("div", { className: "flex items-center gap-1.5" },
+              h("input", {
+                type: "number",
+                min: 0,
+                max: 99,
+                className: "dt-input !w-16 !py-0.5 text-center text-sm",
+                value: n.desconfianca || 0,
+                onChange: e => updNode(n.id, x => { x.desconfianca = Math.max(0, Math.floor(+e.target.value || 0)); })
+              }),
+              h(Btn, { tone: "r", size: "sm", onClick: () => { setShowMet(false); updNode(n.id, x => { x.desconfianca = 0; }); } }, h(Icon, { name: "close", size: 12 }))
+            )
+          ),
+
+          /* Barra Compacta de Ações do Nó */
+          h("div", { className: "mt-3 pt-2.5 flex flex-wrap gap-1.5 items-center", style: { borderTop: "1px solid var(--border-1)" } },
+            !isLeaf && A(n.opcoes).length < 8 && h(Btn, {
+              tone: "g",
+              size: "sm",
+              onClick: () => updNode(n.id, x => { x.opcoes.push(OP("", "", "")); })
+            }, h(Icon, { name: "plus", size: 12 }), "Opção"),
+
+            !rootChoicesOnly && h(Btn, {
+              tone: "p",
+              size: "sm",
+              title: "Adicionar fala alternativa condicional (IF)",
+              onClick: () => updNode(n.id, x => {
+                if (!Array.isArray(x.fala_condicional)) x.fala_condicional = [];
+                x.fala_condicional.push({ cond: defaultCond(), fala: "" });
+              })
+            }, h(Icon, { name: "branch", size: 12 }), "IF Fala"),
+
+            !isRoot && !isLeaf && h(Btn, {
+              tone: "p",
+              size: "sm",
+              title: "Transformar este nó em desviador condicional IF / ELSE",
+              onClick: () => updNode(n.id, x => {
+                x.condicional = { cond: defaultCond(), se_verdadeiro: x.opcoes[0]?.proximo_no || "", se_falso: x.opcoes[1]?.proximo_no || "" };
+                x.opcoes = [];
+                x.desbloqueios = [];
+                x.folha = null;
+              })
+            }, "Virar IF"),
+
+            cfg.modulos.inventario && !isLeaf && !draft && h(Btn, {
+              tone: "c",
+              size: "sm",
+              onClick: () => setDraft({ ev: livres[0]?.id || "", pergunta: "", reacao: "" })
+            }, "+ Item REQ"),
+
+            cfg.modulos.inventario && !rootChoicesOnly && !recompensa && evs.some(e => e.id) && h(Btn, {
+              tone: "a",
+              size: "sm",
+              onClick: () => updNode(n.id, x => { x.evidencia_desbloqueada = (evs.find(e => e.id) || {}).id || ""; })
+            }, "+ Ganha"),
+
+            cfg.modulos.metrica_global && !rootChoicesOnly && !metVisible && h(Btn, {
+              tone: "r",
+              size: "sm",
+              onClick: () => { setShowMet(true); updNode(n.id, x => { x.desconfianca = Math.max(1, x.desconfianca || 0); }); }
+            }, "+ Métrica"),
+
+            !isRoot && (isLeaf
+              ? h(Btn, { tone: "z", size: "sm", extra: "ml-auto", onClick: () => updNode(n.id, x => { x.folha = null; }) }, "Reabrir Nó")
+              : A(n.opcoes).length === 0 && A(n.desbloqueios).length === 0
+                ? h(Btn, { tone: "a", size: "sm", extra: "ml-auto", onClick: () => updNode(n.id, x => { x.folha = { visao_jogador: defState }; }) }, "Marcar Fim")
+                : h(ConfirmBtn, { tone: "z", size: "sm", extra: "ml-auto", ask: "Apagar opções?", onConfirm: () => updNode(n.id, x => { x.folha = { visao_jogador: defState }; x.opcoes = []; x.desbloqueios = []; }) }, "Marcar Fim")
+            )
           )
-        : h(Btn, {
-            tone: "a",
-            extra: "w-full text-sm",
-            disabled: !evs.some(e => e.id),
-            onClick: () => updNode(n.id, x => { x.evidencia_desbloqueada = (evs.find(e => e.id) || {}).id || ""; })
-          }, "[ + CONCEDE " + (cfg.termos.item_a || "ITEM").toUpperCase() + " / " + (cfg.termos.item_b || "INFO").toUpperCase() + " ]")
-    ),
-
-    /* Métrica Global (se módulo ativo) */
-    cfg.modulos.metrica_global && !isToolRoot && h("div", { className: "mt-2 flex gap-1.5 items-center justify-between border border-zinc-800 bg-zinc-950 px-2 py-1" },
-      h("span", { className: "text-rose-400 text-sm" }, metIcon + " " + (cfg.termos.metrica_nome || "Métrica") + " +"),
-      h("input", {
-        type: "number",
-        min: 0,
-        max: 99,
-        className: inpCls + " !w-14 text-center",
-        value: n.desconfianca || 0,
-        onChange: e => updNode(n.id, x => { x.desconfianca = Math.max(0, Math.floor(+e.target.value || 0)); })
-      })
-    ),
-
-    /* Trava Experimental (se módulo experimental ativo) */
-    cfg.modulos.experimental && isScene && h("div", { className: "mt-2 border border-dashed border-zinc-700 p-1.5 bg-zinc-950" },
-      h("div", { className: "flex items-center justify-between gap-1 mb-1" },
-        h("span", { className: "text-zinc-400 uppercase text-sm" }, "Trava de rota"),
-        h(ExpBadge, { text: "EXP" })
-      ),
-      h("select", {
-        className: inpCls + (secreta ? " !text-amber-300 !border-amber-400" : ""),
-        value: presetVal,
-        onChange: e => {
-          const val = e.target.value;
-          updNode(n.id, x => {
-            x.trava_rota_secreta = val === "__custom"
-              ? (PRESETS_ROTA.some(p2 => p2[0] === x.trava_rota_secreta) || !x.trava_rota_secreta ? "Rota_Personalizada" : x.trava_rota_secreta)
-              : val;
-          });
-        }
-      },
-        h("option", { value: "" }, "Livre (padrão)"),
-        PRESETS_ROTA.map(([k, nome]) => h("option", { key: k, value: k }, "🔑 " + nome)),
-        h("option", { value: "__custom" }, "🔑 Personalizada…")
-      ),
-      presetVal === "__custom" && h("input", {
-        className: inpCls + " mt-1",
-        value: secreta,
-        placeholder: "Chave da rota…",
-        onChange: e => updNode(n.id, x => { x.trava_rota_secreta = e.target.value.trim() ? e.target.value : "Rota_Personalizada"; })
-      })
-    ),
-
-    /* Rodapé */
-    !isRoot && h("div", { className: "flex justify-between gap-2 mt-2 pt-1 border-t border-zinc-800" },
-      isLeaf
-        ? h(Btn, { tone: "z", extra: "text-sm", onClick: () => updNode(n.id, x => { x.folha = null; }) }, "VIRAR INTERMEDIÁRIO")
-        : h(ConfirmBtn, {
-            ask: "APAGAR OPÇÕES?",
-            extra: "text-sm",
-            onConfirm: () => updNode(n.id, x => { x.folha = { visao_jogador: defState }; x.opcoes = []; x.desbloqueios = []; })
-          }, "VIRAR FOLHA"),
-      h(ConfirmBtn, { tone: "r", extra: "text-sm", ask: "EXCLUIR NÓ?", onConfirm: excluir }, "EXCLUIR")
-    )
+        )
   );
 }
 
+/* ==========================================================================
+   ÁRVORE VISUAL + DRAG-TO-PAN + ZOOM CTRL+SCROLL
+   ========================================================================== */
 function plan(nos) {
   const by = {};
   A(nos).forEach(n => { by[n.id] = n; });
   const owned = new Set();
   const placed = new Set();
   const roots = [];
-  const kidsOf = n => [
-    ...A(n.opcoes).map((o, i) => ({ key: "o" + i, to: o.proximo_no })),
-    ...A(n.desbloqueios).map((x, i) => ({ key: "e" + i, to: x.no }))
-  ];
+  const kidsOf = n => {
+    if (!n) return [];
+    if (n.condicional) {
+      return [
+        { key: "t0", to: n.condicional.se_verdadeiro },
+        { key: "f0", to: n.condicional.se_falso }
+      ];
+    }
+    return [
+      ...A(n.opcoes).map((o, i) => ({ key: "o" + i, to: o.proximo_no })),
+      ...A(n.desbloqueios).map((x, i) => ({ key: "e" + i, to: x.no }))
+    ];
+  };
   const visit = id => {
     placed.add(id);
     kidsOf(by[id]).forEach(k => {
@@ -1861,12 +2711,12 @@ function plan(nos) {
   return { owned, roots, by, kidsOf };
 }
 
-function Branch({ id, T, P, sel, setSel, onJumpNode }) {
+function Branch({ id, T, P, sel, setSel, onJumpNode, onOpenEndingsModal }) {
   const n = P.by[id];
   if (!n) return null;
   const kids = P.kidsOf(n);
   const sk = T.aba + "|" + n.id;
-  const baseLine = T.lineTone === "p" ? "border-purple-500/40" : T.lineTone === "c" ? "border-cyan-500/40" : "border-emerald-500/40";
+  const baseLine = T.lineTone === "p" ? "line-spec" : T.lineTone === "c" ? "line-info" : "line-main";
 
   return h("div", { className: "flex flex-row items-center" },
     h(NodeCard, {
@@ -1876,42 +2726,42 @@ function Branch({ id, T, P, sel, setSel, onJumpNode }) {
       cfg: T.cfg,
       isRoot: T.nos[0]?.id === n.id,
       aba: T.aba,
-      npcId: T.npcId,
       updNode: T.updNode,
       updDia: T.updTree,
       selected: sel === sk,
       onSel: () => setSel(sk),
-      onJumpNode
+      onJumpNode,
+      onOpenEndingsModal
     }),
     kids.length > 0 && h("div", { className: "flex flex-row items-center" },
-      h("span", { "aria-hidden": "true", className: "block w-10 border-t-2 " + baseLine }),
+      h("span", { "aria-hidden": "true", className: "block w-10 border-t-2 " + (n.condicional ? "line-spec" : baseLine) }),
       h("div", { className: "flex flex-col" },
         kids.map((k, idx) => {
-          const isEv = k.key[0] === "e";
+          const kind = k.key[0];
           const ix = +k.key.slice(1);
-          const o = isEv ? null : n.opcoes[ix];
-          const line = isEv ? "border-cyan-400/70" : baseLine;
+          const o = kind === "o" ? n.opcoes[ix] : null;
+          const line = kind === "e" ? "line-info" : kind === "t" ? "line-pri-solid" : kind === "f" ? "line-danger-solid" : baseLine;
           const pos = kids.length === 1 ? "one" : idx === 0 ? "first" : idx === kids.length - 1 ? "last" : "mid";
-          const tag = isEv ? "🔍" : (LET[ix] || "?");
-          const tip = isEv ? "🔍 " + S(n.desbloqueios[ix]?.ev) + ": " + S(P.by[k.to]?.confronto_evidencia?.pergunta_jogador) : S(o?.texto);
+          const tag = kind === "e" ? "REQ" : kind === "t" ? "IF" : kind === "f" ? "ELSE" : ((o?.cond ? "IF·" : "") + (LET[ix] || "?"));
+          const tagCls = kind === "e" ? "fg-info font-bold" : kind === "t" ? "fg-pri font-bold" : kind === "f" ? "fg-danger font-bold" : (o?.cond ? "fg-spec font-bold" : "fg-2 font-semibold");
           const exists = k.to && P.by[k.to];
 
-          return h("div", { key: k.key, className: "relative flex flex-row items-center pl-10 py-4" },
+          return h("div", { key: k.key, className: "relative flex flex-row items-center pl-14 py-4" },
             pos !== "one" && h("span", {
               "aria-hidden": "true",
               className: "absolute left-0 w-0 border-l-2 " + line + " " + (pos === "first" ? "top-1/2 bottom-0" : pos === "last" ? "top-0 bottom-1/2" : "top-0 bottom-0")
             }),
-            h("span", { "aria-hidden": "true", className: "absolute left-0 top-1/2 w-10 border-t-2 " + line }),
-            h("span", { title: tip, className: "absolute left-2 top-1/2 -translate-y-full text-sm leading-none pb-0.5 " + (isEv ? "text-cyan-400" : "text-zinc-300") }, tag),
+            h("span", { "aria-hidden": "true", className: "absolute left-0 top-1/2 w-14 border-t-2 " + line }),
+            h("span", { className: "absolute left-2 top-1/2 -translate-y-full text-xs leading-none pb-1 " + tagCls }, tag),
             P.owned.has(n.id + "|" + k.key)
-              ? h(Branch, { id: k.to, T, P, sel, setSel, onJumpNode })
+              ? h(Branch, { id: k.to, T, P, sel, setSel, onJumpNode, onOpenEndingsModal })
               : exists
-                ? h("button", {
-                    type: "button",
-                    className: "w-[250px] shrink-0 text-left border-2 border-dashed border-zinc-600 bg-zinc-900 text-zinc-300 px-2 py-1 hover:text-cyan-300 hover:border-cyan-400 cursor-pointer",
+                ? h(Btn, {
+                    tone: "z",
+                    size: "sm",
                     onClick: e => { e.stopPropagation(); onJumpNode(k.to); }
-                  }, "↪ Salto / retorno p/ " + k.to)
-                : h("div", { className: "w-[230px] shrink-0 border-2 border-dashed border-rose-500 bg-rose-950/30 text-rose-400 px-2 py-1" }, "⚠ escolha sem destino")
+                  }, "Ir para " + k.to)
+                : h("div", { className: "px-3 py-1.5 rounded tone-box-r fg-danger text-xs font-semibold", style: { border: "1px dashed var(--danger)" } }, "Sem destino")
           );
         })
       )
@@ -1919,11 +2769,15 @@ function Branch({ id, T, P, sel, setSel, onJumpNode }) {
   );
 }
 
-function TreeArea({ aba, lineTone, npcId, titulo, sub, nos: nosIn, evs, cfg, zoom, sel, setSel, updNodeIn, updTreeIn, onJumpNode }) {
-  const ref = useRef(null);
+function TreeArea({ aba, lineTone, titulo, sub, nos: nosIn, evs, cfg, zoom, setZ, sel, setSel, updNodeIn, updTreeIn, onJumpNode, onOpenEndingsModal }) {
+  const mainRef = useRef(null);
+  const innerRef = useRef(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [panning, setPanning] = useState(false);
+  const panStart = useRef(null);
+
   useEffect(() => {
-    const t = ref.current;
+    const t = innerRef.current;
     if (!t) return;
     const f = () => {
       const s = { w: Math.round(t.offsetWidth), h: Math.round(t.offsetHeight) };
@@ -1936,27 +2790,63 @@ function TreeArea({ aba, lineTone, npcId, titulo, sub, nos: nosIn, evs, cfg, zoo
     return () => { if (ro) ro.disconnect(); window.removeEventListener("resize", f); };
   }, [nosIn]);
 
-  const headTone = lineTone === "p" ? ["border-purple-500", "text-purple-400"] : lineTone === "c" ? ["border-cyan-500", "text-cyan-400"] : ["border-emerald-500", "text-emerald-400"];
+  const onMouseDown = e => {
+    if (e.button !== 0 && e.button !== 1) return;
+    if (e.target.closest("[data-node], button, input, textarea, select")) return;
+    const m = mainRef.current;
+    if (!m) return;
+    panStart.current = { x: e.clientX, y: e.clientY, sl: m.scrollLeft, st: m.scrollTop };
+    setPanning(true);
+  };
+
+  const onMouseMove = e => {
+    if (!panStart.current || !mainRef.current) return;
+    mainRef.current.scrollLeft = panStart.current.sl - (e.clientX - panStart.current.x);
+    mainRef.current.scrollTop = panStart.current.st - (e.clientY - panStart.current.y);
+  };
+
+  const endPan = () => {
+    panStart.current = null;
+    if (panning) setPanning(false);
+  };
+
+  const onWheel = e => {
+    if (e.ctrlKey) {
+      e.preventDefault();
+      setZ(zoom + (e.deltaY < 0 ? 0.08 : -0.08));
+    }
+  };
+
   const nos = A(nosIn);
-  const T = { aba, lineTone, npcId, nos, evs, cfg, updNode: updNodeIn, updTree: updTreeIn };
+  const T = { aba, lineTone, nos, evs, cfg, updNode: updNodeIn, updTree: updTreeIn };
   const P = plan(nos);
 
-  return h("main", { className: "w-full overflow-auto grid-bg", style: { height: "calc(100vh - 108px)" }, "aria-label": titulo },
+  return h("main", {
+    ref: mainRef,
+    onMouseDown,
+    onMouseMove,
+    onMouseUp: endPan,
+    onMouseLeave: endPan,
+    onWheel,
+    className: "w-full overflow-auto dt-canvas canvas-pan" + (panning ? " panning" : ""),
+    style: { height: "calc(100vh - 108px)" },
+    "aria-label": titulo
+  },
     h("div", { style: { width: size.w ? size.w * zoom : "auto", height: size.h ? size.h * zoom : "auto" } },
       h("div", {
-        ref,
+        ref: innerRef,
         className: "scale-t min-w-max p-10",
         style: { width: "max-content", transform: "scale(" + zoom + ")", transformOrigin: "0 0" },
-        onClick: () => setSel(null)
+        onClick: () => { if (!panning) setSel(null); }
       },
-        h("div", { className: "mb-8 pb-2 border-b-2 " + headTone[0], style: { maxWidth: 720 } },
-          h("div", { className: "glow text-2xl " + headTone[1] }, titulo),
-          h("div", { className: "text-zinc-400 text-sm" }, sub)
+        h("div", { className: "mb-8 pb-3", style: { maxWidth: 740, borderBottom: "1px solid var(--border-2)" } },
+          h("div", { className: "text-2xl font-bold fg-1" }, titulo),
+          h("div", { className: "fg-2 text-sm mt-0.5" }, sub || "Arraste o fundo vazio para navegar · Ctrl + Roda do mouse para zoom")
         ),
         P.roots.map((r, i) =>
-          h("div", { key: r, className: i ? "mt-14 pt-6 border-t-2 border-dashed border-rose-500" : "" },
-            i > 0 && h("div", { className: "text-rose-400 text-sm mb-2 uppercase" }, "⚠ Nó órfão / solto (inalcançável a partir da raiz):"),
-            h(Branch, { id: r, T, P, sel, setSel, onJumpNode })
+          h("div", { key: r, className: i ? "mt-14 pt-6" : "", style: i ? { borderTop: "1px dashed var(--danger)" } : undefined },
+            i > 0 && h("div", { className: "fg-danger text-xs font-bold mb-2 uppercase" }, "Nó órfão (sem conexão com a raiz):"),
+            h(Branch, { id: r, T, P, sel, setSel, onJumpNode, onOpenEndingsModal })
           )
         )
       )
@@ -1965,34 +2855,34 @@ function TreeArea({ aba, lineTone, npcId, titulo, sub, nos: nosIn, evs, cfg, zoo
 }
 
 /* ==========================================================================
-   MATRIZ DE TRANSIÇÃO & VEREDITO
+   MATRIZ, VEREDITO, OPÇÕES, SALVAR E SIMULADOR
    ========================================================================== */
 function Matriz({ cenaData, cfg, proxCena, updCena, onJumpNext }) {
+  if (!A(cenaData?.matriz).length) return null;
   return h(Panel, {
-    title: "MATRIZ DE TRANSIÇÃO" + (proxCena ? " → " + proxCena.rotulo.toUpperCase() : ""),
+    title: "Matriz de Transição" + (proxCena ? " -> " + proxCena.rotulo : ""),
     tone: "a",
     defaultOpen: false,
     right: proxCena && proxCena.aberturas && cfg.modulos.aberturas_dinamicas && h(Btn, {
       tone: "c",
-      extra: "text-sm !py-0",
+      size: "sm",
       onClick: e => { e.stopPropagation(); onJumpNext(proxCena.id); }
-    }, "↳ EDITAR ENTRADA DE " + proxCena.rotulo)
+    }, "Ir para Entrada de " + proxCena.rotulo)
   },
-    h("p", { className: "text-zinc-400 text-sm mb-3" }, "Anotações de design sobre como o estado final desta cena afeta a próxima."),
     A(cenaData?.matriz).map((m, i) => {
       const exp = isExpMatrixKey(m.k);
       const stTone = stateTone(cfg, m.k);
-      return h("div", { key: m.k, className: "grid gap-2 mb-2 md:grid-cols-[230px_1fr]" },
+      return h("div", { key: m.k, className: "grid gap-2.5 mb-2.5 md:grid-cols-[220px_1fr] items-start" },
         h("div", {
-          className: "border-2 px-2 py-1 uppercase flex items-center justify-between gap-1 " + (exp ? "border-purple-500 text-purple-400" : stTone.b + " " + stTone.t)
+          className: "px-3 py-2 rounded text-sm font-bold flex items-center justify-between " + (exp ? "tone-box-p fg-spec" : stTone.boxCls + " " + stTone.textCls),
+          style: { border: "1px solid var(--border-2)" }
         },
           h("span", null, m.k),
-          exp && h(ExpBadge, { text: "EXP" })
+          exp && h("span", { className: "text-xs uppercase" }, "Exp")
         ),
         h(TA, {
           value: m.efeito,
           label: "Nota " + m.k,
-          tone: "text-amber-300",
           onChange: t => updCena(c => { if (c.matriz[i]) c.matriz[i].efeito = t; })
         })
       );
@@ -2003,24 +2893,23 @@ function Matriz({ cenaData, cfg, proxCena, updCena, onJumpNext }) {
 function Veredito({ cenaData, scRotulo, updCena }) {
   const v = cenaData?.veredito;
   if (!v) return null;
-  return h(Panel, { title: "⚖ VEREDITO FINAL · " + scRotulo.toUpperCase(), tone: "a", defaultOpen: false },
-    h("div", { className: "max-w-xs mb-2" },
-      h(Lbl, { cls: "!mt-0" }, "Natureza / Verdade Real"),
+  return h(Panel, { title: "Veredito · " + scRotulo, tone: "a", defaultOpen: false },
+    h("div", { className: "max-w-xs mb-3" },
+      h(Lbl, null, "Natureza Real do NPC"),
       h("select", {
-        className: inpCls,
+        className: "dt-input",
         value: v.verdade,
         onChange: e => updCena(c => { if (c.veredito) c.veredito.verdade = e.target.value; })
       }, ["Humano", "Sintético"].map(k => h("option", { key: k, value: k }, k)))
     ),
     A(v.opcoes).map((o, i) => {
       const acerto = o.k === "Inconclusivo" ? "SEM DECISÃO" : o.k === v.verdade ? "ACERTO" : "ERRO";
-      const cls = acerto === "ACERTO" ? "border-emerald-500 text-emerald-400" : acerto === "ERRO" ? "border-rose-500 text-rose-500" : "border-amber-500 text-amber-400";
-      return h("div", { key: o.k, className: "grid gap-2 mt-2 md:grid-cols-[210px_1fr]" },
-        h("div", { className: "border-2 px-2 py-1 uppercase " + cls }, o.k + " · " + acerto),
+      const cls = acerto === "ACERTO" ? "tone-box-g fg-pri" : acerto === "ERRO" ? "tone-box-r fg-danger" : "tone-box-a fg-sec";
+      return h("div", { key: o.k, className: "grid gap-2.5 mt-2.5 md:grid-cols-[210px_1fr] items-start" },
+        h("div", { className: "px-3 py-2 rounded text-sm font-bold " + cls, style: { border: "1px solid var(--border-2)" } }, o.k + " · " + acerto),
         h(TA, {
           value: o.consequencia,
           label: "Consequência " + o.k,
-          tone: "text-amber-300",
           onChange: t => updCena(c => { if (c.veredito && c.veredito.opcoes[i]) c.veredito.opcoes[i].consequencia = t; })
         })
       );
@@ -2028,572 +2917,67 @@ function Veredito({ cenaData, scRotulo, updCena }) {
   );
 }
 
-/* ==========================================================================
-   MODAL 1: GERENCIADOR DE JOGOS + DETECTOR AUTOMÁTICO ("ABRIR ARQUIVO DE JOGO...")
-   ========================================================================== */
-function GamesHubModal({ reg, activeGame, onSwitchGame, onCreateGame, onDeleteGame, onApplyDetected, onResetOfficialTuring, onClose, flash }) {
-  const [tab, setTab] = useState("jogos"); // jogos | novo | abrir
-  const [newName, setNewName] = useState("");
-  const [newTpl, setNewTpl] = useState("livre");
-  const [newTheme, setNewTheme] = useState("quill_tree");
-
-  const [detected, setDetected] = useState(null);
-  const [detErr, setDetErr] = useState("");
-  const [targetNpcIdx, setTargetNpcIdx] = useState(activeGame.npc_ativo || 0);
-  const fileRef = useRef(null);
-
-  useEffect(() => {
-    const f = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", f);
-    return () => window.removeEventListener("keydown", f);
-  }, []);
-
-  const handleRawFile = text => {
-    setDetErr("");
-    setDetected(null);
-    try {
-      const parsed = JSON.parse(text);
-      const info = detectImportedFile(parsed);
-      setDetected(info);
-    } catch (e) {
-      setDetErr(e && e.message ? e.message : "Falha ao analisar arquivo JSON.");
-    }
-  };
-
-  const onPickFile = ev => {
-    const f = ev.target.files?.[0];
-    if (!f) return;
-    const r = new FileReader();
-    r.onload = () => handleRawFile(String(r.result || ""));
-    r.readAsText(f, "utf-8");
-  };
-
-  const TPL_CARDS = [
-    { id: "turing_test", icon: "🖥️", title: "Template TuringTest", defTheme: "turing_crt", desc: "Estrutura completa D1–D6 (Semanas 1 e 2), árvores de Viés e Injeção, Objeto/Informação, Autodesconfiança, Matriz, Veredito e export TXT para C." },
-    { id: "livre", icon: "🪶", title: "Jogo Livre / Geral", defTheme: "quill_tree", desc: "Cenas livres renomeáveis, estados finais customizáveis, itens/flags condicionais e export JSON limpo para qualquer engine." },
-    { id: "rpg", icon: "🐉", title: "RPG / Dungeon Crawler", defTheme: "dungeon", desc: "Encontros, Quests e Mercador, estados Aliado/Neutro/Hostil/Missão Aceita e métrica global de Reputação/Karma." },
-    { id: "crime", icon: "🩸", title: "Investigação / Noir", defTheme: "crimson_crime", desc: "Abordagem e Acareação com aberturas dinâmicas, Provas/Depoimentos, Tensão do Caso e Veredito." }
-  ];
-
-  return h("div", { className: "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
-    h("div", { className: "w-full max-w-4xl border-2 border-emerald-500 bg-zinc-950 p-4 dt-card-shadow max-h-[92vh] overflow-auto", onClick: e => e.stopPropagation() },
-      h("div", { className: "flex justify-between items-center pb-2 mb-3 border-b-2 border-zinc-700" },
-        h("span", { className: "glow text-2xl text-emerald-400" }, "📂 PROJETOS DE JOGO & DETECTOR DE ARQUIVOS"),
-        h(Btn, { tone: "r", onClick: onClose }, "FECHAR [ESC]")
-      ),
-      h("div", { className: "flex flex-wrap gap-2 mb-4" },
-        h(Btn, { tone: "g", on: tab === "jogos", onClick: () => setTab("jogos") }, "🗂 MEUS JOGOS (" + reg.list.length + ")"),
-        h(Btn, { tone: "c", on: tab === "abrir", onClick: () => setTab("abrir") }, "📂 ABRIR ARQUIVO DE JOGO / ÁRVORE..."),
-        h(Btn, { tone: "a", on: tab === "novo", onClick: () => setTab("novo") }, "➕ CRIAR NOVO JOGO")
-      ),
-
-      /* ABA 1: LISTA DE JOGOS ISOLADOS */
-      tab === "jogos" && h("div", { className: "space-y-2" },
-        h("p", { className: "text-zinc-400 text-sm mb-2" }, "Cada jogo abaixo fica salvo em um espaço isolado do navegador (e em pastas separadas em games/<nome_do_jogo>/ ao exportar), sem nunca misturar personagens ou árvores com o TuringTest."),
-        reg.list.map(g => {
-          const isCur = g.id === activeGame.game_id;
-          const isOfficial = g.id === TURING_OFFICIAL_ID;
-          return h("div", {
-            key: g.id,
-            className: "border-2 p-3 flex flex-wrap items-center justify-between gap-2 " + (isCur ? "border-emerald-400 bg-emerald-950/30" : "border-zinc-700 bg-zinc-900")
-          },
-            h("div", null,
-              h("div", { className: "text-xl " + (isCur ? "text-emerald-400 font-bold" : "text-zinc-200") },
-                (isOfficial ? "🔒 " : "🎮 ") + g.nome + (isCur ? " [ATIVO]" : "")
-              ),
-              h("div", { className: "text-zinc-400 text-sm" },
-                "ID: " + g.id + " · Perfil: " + (g.template || "livre") + " · Tema: " + (g.theme || "turing_crt") + (g.updatedAt ? " · Salvo às " + g.updatedAt : "")
-              )
-            ),
-            h("div", { className: "flex gap-2 items-center" },
-              !isCur && h(Btn, { tone: "g", onClick: () => { onSwitchGame(g.id); onClose(); } }, "ABRIR JOGO"),
-              isOfficial && isCur && h(ConfirmBtn, {
-                tone: "a",
-                ask: "RESTAURAR ARTHUR, MARIA E ANA LÚCIA?",
-                onConfirm: () => { onResetOfficialTuring(); onClose(); }
-              }, "RESTAURAR PRESETS"),
-              !isOfficial && h(ConfirmBtn, {
-                tone: "r",
-                ask: "APAGAR JOGO DO NAVEGADOR?",
-                onConfirm: () => onDeleteGame(g.id)
-              }, "EXCLUIR")
-            )
-          );
-        })
-      ),
-
-      /* ABA 2: ABRIR ARQUIVO COM AUTO-DETECÇÃO */
-      tab === "abrir" && h("div", null,
-        h("div", { className: "border-2 border-dashed border-cyan-500 bg-zinc-900 p-6 text-center mb-3" },
-          h("div", { className: "text-xl text-cyan-400 mb-1" }, "Selecione qualquer arquivo .JSON salvo anteriormente"),
-          h("p", { className: "text-zinc-400 text-sm mb-3" }, "O DialogueTools identifica sozinho se o arquivo é um Jogo Completo, um Personagem/Suspeito (TuringTest v4–v7 ou Geral), um Pacote de Semana/Capítulos ou uma Árvore individual — e evita misturar jogos diferentes por engano."),
-          h("input", { ref: fileRef, type: "file", accept: ".json,application/json", className: "hidden", onChange: onPickFile }),
-          h(Btn, { tone: "c", extra: "text-lg !px-4 !py-1", onClick: () => fileRef.current && fileRef.current.click() }, "📂 ESCOLHER ARQUIVO .JSON NO PC")
-        ),
-        detErr && h("div", { className: "border-2 border-rose-500 bg-rose-950/40 text-rose-300 p-2 mb-2" }, "⚠ " + detErr),
-        detected && h("div", { className: "border-2 border-emerald-400 bg-zinc-900 p-3 space-y-2" },
-          h("div", { className: "text-sm text-cyan-400 uppercase font-bold" }, "✔ ARQUIVO IDENTIFICADO AUTOMATICAMENTE: " + detected.badge),
-          h("div", { className: "text-xl text-emerald-300" }, detected.title),
-          detected.gameName && h("div", { className: "text-sm text-zinc-400" }, "Origem detectada: " + detected.gameName + (detected.gameId ? " (" + detected.gameId + ")" : "")),
-
-          /* Opções inteligentes conforme o tipo detectado */
-          detected.kind === "game" && h("div", { className: "flex flex-wrap gap-2 pt-2" },
-            h(Btn, {
-              tone: "g",
-              onClick: () => { onApplyDetected(detected, "open_game"); onClose(); }
-            }, reg.list.some(x => x.id === detected.gameId) ? "ABRIR E ATUALIZAR JOGO '" + detected.gameName.toUpperCase() + "'" : "ABRIR EM SLOT ISOLADO DE JOGO"),
-            h(Btn, {
-              tone: "p",
-              onClick: () => { onApplyDetected(detected, "clone_game"); onClose(); }
-            }, "CRIAR COMO CÓPIA SEPARADA")
-          ),
-
-          detected.kind === "npc" && h("div", { className: "space-y-2 pt-2" },
-            detected.gameId && detected.gameId !== activeGame.game_id && h("div", { className: "border border-amber-400 bg-amber-950/40 text-amber-300 p-2 text-sm" },
-              "⚠ Atenção: este personagem pertence ao jogo/formato '" + (detected.gameName || detected.gameId) + "', mas você está com '" + activeGame.game_nome + "' aberto!"
-            ),
-            h("div", { className: "flex flex-wrap gap-2" },
-              detected.isTuringNpc && activeGame.game_id !== TURING_OFFICIAL_ID && h(Btn, {
-                tone: "g",
-                onClick: () => { onApplyDetected(detected, "npc_into_turing"); onClose(); }
-              }, "ABRIR NO TURING TEST (SEM MISTURAR AQUI)"),
-              h(Btn, {
-                tone: detected.gameId && detected.gameId !== activeGame.game_id ? "a" : "g",
-                onClick: () => { onApplyDetected(detected, "npc_into_current"); onClose(); }
-              }, "IMPORTAR EM '" + activeGame.game_nome.toUpperCase() + "'"),
-              h(Btn, {
-                tone: "p",
-                onClick: () => { onApplyDetected(detected, "npc_as_new_game"); onClose(); }
-              }, "CRIAR NOVO JOGO COM ESTE PERSONAGEM")
-            )
-          ),
-
-          detected.kind === "chapter_pack" && h("div", { className: "space-y-2 pt-2" },
-            h("div", { className: "flex items-center gap-2" },
-              h("span", { className: "text-sm text-zinc-400" }, "Aplicar capítulos em qual personagem de '" + activeGame.game_nome + "'?"),
-              h("select", { className: inpCls + " !w-56", value: targetNpcIdx, onChange: e => setTargetNpcIdx(+e.target.value) },
-                activeGame.npcs.map((np, i) => h("option", { key: i, value: i }, np.npc.nome))
-              )
-            ),
-            h(Btn, { tone: "g", onClick: () => { onApplyDetected(detected, "pack_into_npc", targetNpcIdx); onClose(); } }, "IMPORTAR PACOTE DE CAPÍTULOS / SEMANA")
-          ),
-
-          detected.kind === "single_tree" && h("div", { className: "flex flex-wrap gap-2 pt-2" },
-            detected.targetId && h(Btn, {
-              tone: "g",
-              onClick: () => { onApplyDetected(detected, "tree_into_matching"); onClose(); }
-            }, "APLICAR NA ABA '" + detected.targetId + "'"),
-            h(Btn, {
-              tone: "c",
-              onClick: () => { onApplyDetected(detected, "tree_into_active"); onClose(); }
-            }, "APLICAR NA ABA ATUAL ABERTA")
-          )
-        )
-      ),
-
-      /* ABA 3: CRIAR NOVO JOGO */
-      tab === "novo" && h("div", { className: "space-y-3" },
-        h("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-3" },
-          h("div", null,
-            h(Lbl, { cls: "!mt-0" }, "Nome do Novo Jogo"),
-            h("input", {
-              className: inpCls,
-              value: newName,
-              placeholder: "Ex.: Crônicas de Cinza / Setor B...",
-              onChange: e => setNewName(e.target.value)
-            })
-          ),
-          h("div", null,
-            h(Lbl, { cls: "!mt-0" }, "Tema Visual Inicial"),
-            h("select", { className: inpCls, value: newTheme, onChange: e => setNewTheme(e.target.value) },
-              THEMES.map(t => h("option", { key: t.id, value: t.id }, t.label))
-            )
-          )
-        ),
-        h(Lbl, null, "Escolha o Template Base (você poderá ligar/desligar qualquer módulo depois em ⚙ Configurar Jogo)"),
-        h("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-2" },
-          TPL_CARDS.map(c =>
-            h("button", {
-              key: c.id,
-              type: "button",
-              onClick: () => { setNewTpl(c.id); setNewTheme(c.defTheme); },
-              className: "text-left p-3 border-2 cursor-pointer " + (newTpl === c.id ? "border-emerald-400 bg-emerald-950/30" : "border-zinc-700 bg-zinc-900 hover:bg-zinc-800")
-            },
-              h("div", { className: "text-lg text-emerald-400 font-bold" }, c.icon + " " + c.title),
-              h("div", { className: "text-sm text-zinc-400 mt-1" }, c.desc)
-            )
-          )
-        ),
-        h("div", { className: "pt-2" },
-          h(Btn, {
-            tone: "g",
-            extra: "text-lg !px-4 !py-1",
-            onClick: () => {
-              onCreateGame(newName || "Novo Jogo", newTpl, newTheme);
-              flash("Novo projeto criado em slot isolado!");
-              onClose();
-            }
-          }, "✨ CRIAR E ABRIR PROJETO")
-        )
-      )
-    )
-  );
-}
-
-/* ==========================================================================
-   MODAL 2: CONFIGURAR MÓDULOS, CENAS, ÁRVORES EXTRAS E ESTADOS DO JOGO
-   ========================================================================== */
-function ConfigModal({ game, updGame, onClose }) {
+function ConfigModal({ game, updGame, onOpenEndings, onClose }) {
   const cfg = game.config;
   useEffect(() => {
     const f = e => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
   }, []);
-
   const toggleMod = k => updGame(g => { g.config.modulos[k] = !g.config.modulos[k]; });
 
-  return h("div", { className: "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
-    h("div", { className: "w-full max-w-4xl border-2 border-amber-400 bg-zinc-950 p-4 dt-card-shadow max-h-[92vh] overflow-auto", onClick: e => e.stopPropagation() },
-      h("div", { className: "flex justify-between items-center pb-2 mb-3 border-b-2 border-zinc-700" },
-        h("span", { className: "glow text-2xl text-amber-400" }, "⚙ CONFIGURAR ESTRUTURA & MÓDULOS DO JOGO"),
-        h(Btn, { tone: "r", onClick: onClose }, "CONCLUIR [ESC]")
+  return h("div", { className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
+    h("div", { className: "w-full max-w-xl dt-card p-6 space-y-4", onClick: e => e.stopPropagation() },
+      h("div", { className: "flex justify-between items-center pb-3", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("h3", { className: "text-xl font-bold fg-1 m-0" }, "Opções e Módulos do Projeto"),
+        h(Btn, { tone: "z", size: "sm", onClick: onClose }, h(Icon, { name: "close", size: 15 }))
       ),
-
-      /* Nome e Termos */
-      h("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-2 mb-4" },
-        h("div", null,
-          h(Lbl, { cls: "!mt-0" }, "Título do Jogo"),
-          h("input", { className: inpCls, value: game.game_nome, onChange: e => updGame(g => { g.game_nome = e.target.value; }) })
-        ),
-        h("div", null,
-          h(Lbl, { cls: "!mt-0" }, "Termo p/ Personagens (plural)"),
-          h("input", { className: inpCls, value: cfg.termos.npc_plural, onChange: e => updGame(g => { g.config.termos.npc_plural = e.target.value; }) })
-        ),
-        h("div", null,
-          h(Lbl, { cls: "!mt-0" }, "Nome da Métrica Global"),
-          h("input", { className: inpCls, value: cfg.termos.metrica_nome, onChange: e => updGame(g => { g.config.termos.metrica_nome = e.target.value; }) })
-        )
-      ),
-
-      /* Switches de Módulos (Opção 3!) */
-      h(Lbl, null, "Módulos Ativos neste Jogo (ligue ou desligue livremente)"),
-      h("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-2 mb-4" },
+      h("div", { className: "space-y-2" },
         [
-          ["inventario", "📦 Inventário, Escolhas Condicionais (REQ) & Recompensas"],
-          ["metrica_global", "👁 Variável / Métrica Oculta Global entre Personagens"],
-          ["aberturas_dinamicas", "🗣 Falas de Abertura Variantes por Estado Anterior"],
-          ["matriz_transicao", "🔀 Painel Matriz de Consequências / Transição"],
-          ["veredito", "⚖ Painel de Veredito Final nos Fechamentos"],
-          ["experimental", "🧪 Campos Experimentais (Trava de Rota Secreta)"],
-          ["export_turing_txt", "📄 Regras & Exportador TXT do Motor C (TuringTest)"]
+          ["metrica_global", "Métrica Global entre NPCs"],
+          ["inventario", "Inventário de Itens, Informações & Confrontos"],
+          ["aberturas_dinamicas", "Falas iniciais variantes por final anterior"],
+          ["matriz_transicao", "Painel Matriz de Transição"],
+          ["veredito", "Painel de Veredito Final"],
+          ["export_turing_txt", "Exportador TXT para Motor C (TuringTest)"]
         ].map(([k, label]) =>
           h("button", {
             key: k,
             type: "button",
             onClick: () => toggleMod(k),
-            className: "text-left px-2.5 py-1.5 border-2 flex justify-between items-center cursor-pointer " + (cfg.modulos[k] ? "border-emerald-400 bg-emerald-950/30 text-emerald-300" : "border-zinc-700 bg-zinc-900 text-zinc-500")
-          },
-            h("span", null, label),
-            h("span", { className: "font-bold" }, cfg.modulos[k] ? "[ON]" : "[OFF]")
-          )
+            className: "w-full text-left px-3.5 py-2.5 rounded flex justify-between items-center cursor-pointer",
+            style: {
+              backgroundColor: cfg.modulos[k] ? "var(--pri-soft)" : "var(--bg-surface)",
+              border: "1px solid " + (cfg.modulos[k] ? "var(--pri)" : "var(--border-2)"),
+              color: "var(--fg-1)"
+            }
+          }, h("span", { className: "font-medium" }, label), h("span", { className: "text-xs font-bold uppercase " + (cfg.modulos[k] ? "fg-pri" : "fg-3") }, cfg.modulos[k] ? "Ativo" : "Off"))
         )
       ),
-
-      /* Cenas / Capítulos / Dias */
-      h(Lbl, null, "Cenas / Capítulos / Dias por Personagem"),
-      h("div", { className: "space-y-1 mb-2" },
-        cfg.cenas.map((sc, i) =>
-          h("div", { key: i, className: "grid grid-cols-[90px_1fr_90px_auto_auto_auto_28px] gap-1.5 items-center" },
-            h("input", { className: inpCls, value: sc.id, title: "ID da Cena", onChange: e => updGame(g => {
-              const old = g.config.cenas[i].id;
-              const nv = e.target.value.trim() || old;
-              g.config.cenas[i].id = nv;
-              if (old !== nv) g.npcs.forEach(np => { if (np.cenas[old]) { np.cenas[nv] = np.cenas[old]; delete np.cenas[old]; } if (np.aba === old) np.aba = nv; });
-            }) }),
-            h("input", { className: inpCls, value: sc.rotulo, placeholder: "Nome na aba", onChange: e => updGame(g => { g.config.cenas[i].rotulo = e.target.value; }) }),
-            h("input", { className: inpCls, value: sc.grupo, placeholder: "Grupo (S1)", onChange: e => updGame(g => { g.config.cenas[i].grupo = e.target.value; }) }),
-            h(Btn, { tone: sc.aberturas ? "a" : "z", extra: "text-sm", onClick: () => updGame(g => { g.config.cenas[i].aberturas = !g.config.cenas[i].aberturas; }) }, "3 Aberturas"),
-            h(Btn, { tone: sc.matriz ? "a" : "z", extra: "text-sm", onClick: () => updGame(g => { g.config.cenas[i].matriz = !g.config.cenas[i].matriz; }) }, "Matriz"),
-            h(Btn, { tone: sc.veredito ? "a" : "z", extra: "text-sm", onClick: () => updGame(g => { g.config.cenas[i].veredito = !g.config.cenas[i].veredito; }) }, "Veredito"),
-            cfg.cenas.length > 1 && h("button", { type: "button", className: btnCls("r", "!px-0"), onClick: () => updGame(g => { g.config.cenas.splice(i, 1); }) }, "X")
-          )
-        )
-      ),
-      h(Btn, {
-        tone: "g",
-        extra: "mb-4 text-sm",
-        onClick: () => updGame(g => {
-          let k = g.config.cenas.length + 1;
-          const ids = new Set(g.config.cenas.map(c => c.id));
-          while (ids.has("CENA_" + k)) k += 1;
-          g.config.cenas.push({ id: "CENA_" + k, rotulo: "Cena " + k, grupo: "", aberturas: false, matriz: false, veredito: false });
-        })
-      }, "+ ADICIONAR CENA / DIA"),
-
-      /* Árvores Extras */
-      h(Lbl, null, "Árvores Especiais por Personagem (ex.: Viés, Injeção, Loja, Segredo)"),
-      h("div", { className: "space-y-1 mb-2" },
-        cfg.arvores_extras.map((ex, i) =>
-          h("div", { key: i, className: "grid grid-cols-[100px_160px_1fr_28px] gap-1.5 items-center" },
-            h("input", { className: inpCls, value: ex.id, onChange: e => updGame(g => { g.config.arvores_extras[i].id = e.target.value.toUpperCase().trim() || ex.id; }) }),
-            h("input", { className: inpCls, value: ex.rotulo, placeholder: "Rótulo da aba", onChange: e => updGame(g => { g.config.arvores_extras[i].rotulo = e.target.value; }) }),
-            h("input", { className: inpCls, value: ex.sub, placeholder: "Subtítulo explicativo", onChange: e => updGame(g => { g.config.arvores_extras[i].sub = e.target.value; }) }),
-            h("button", { type: "button", className: btnCls("r", "!px-0"), onClick: () => updGame(g => { g.config.arvores_extras.splice(i, 1); }) }, "X")
-          )
-        )
-      ),
-      h(Btn, {
-        tone: "p",
-        extra: "mb-4 text-sm",
-        onClick: () => updGame(g => {
-          let k = g.config.arvores_extras.length + 1;
-          g.config.arvores_extras.push({ id: "EXTRA_" + k, rotulo: "✨ EXTRA " + k, cor: "p", sub: "Árvore especial do personagem" });
-        })
-      }, "+ ADICIONAR ÁRVORE ESPECIAL"),
-
-      /* Estados de Folha */
-      h(Lbl, null, "Estados / Resultados Finais das Folhas"),
-      h("div", { className: "space-y-1 mb-2" },
-        cfg.estados_folha.map((est, i) =>
-          h("div", { key: i, className: "grid grid-cols-[1fr_180px_28px] gap-1.5 items-center max-w-lg" },
-            h("input", { className: inpCls, value: est.nome, onChange: e => updGame(g => { g.config.estados_folha[i].nome = e.target.value; }) }),
-            h("select", { className: inpCls, value: est.cor, onChange: e => updGame(g => { g.config.estados_folha[i].cor = e.target.value; }) },
-              TONE_KEYS.map(tk => h("option", { key: tk, value: tk }, TONE_MAP[tk].label))
-            ),
-            cfg.estados_folha.length > 1 && h("button", { type: "button", className: btnCls("r", "!px-0"), onClick: () => updGame(g => { g.config.estados_folha.splice(i, 1); }) }, "X")
-          )
-        )
-      ),
-      h(Btn, {
-        tone: "a",
-        extra: "text-sm",
-        onClick: () => updGame(g => { g.config.estados_folha.push({ nome: "Estado " + (g.config.estados_folha.length + 1), cor: "c" }); })
-      }, "+ ADICIONAR ESTADO DE FOLHA")
-    )
-  );
-}
-
-/* ==========================================================================
-   MODAL 3: SIMULADOR INTERATIVO DE DIÁLOGO
-   ========================================================================== */
-function SimModal({ game, npc, aba, onClose, setPlayerName }) {
-  const cfg = game.config;
-  const sc = cfg.cenas.find(c => c.id === aba);
-  const isScene = !!sc;
-  const nos = isScene ? (npc.cenas?.[aba]?.nos || []) : (npc.extras?.[aba]?.nos || []);
-  const by = {};
-  A(nos).forEach(n => { by[n.id] = n; });
-  const rootId = nos[0]?.id || "Entrada";
-  const defState = defaultLeafName(cfg);
-
-  const [visHerdada, setVisHerdada] = useState(defState);
-  const [ownedEvs, setOwnedEvs] = useState(() => new Set(A(npc.evidencias).map(e => e.id)));
-  const [tokens, setTokens] = useState(10);
-  const [curId, setCurId] = useState(rootId);
-  const [visited, setVisited] = useState(() => new Set([rootId]));
-  const [log, setLog] = useState([]);
-  const [ganhos, setGanhos] = useState([]);
-  const [desconf, setDesconf] = useState(0);
-
-  const playerName = game.nome_jogador || "Inspetor";
-  const fmt = txt => S(txt).replace(/\[nome\]/g, playerName);
-
-  const getFalaNo = (n, vh) => {
-    if (!n) return "";
-    if (isScene && sc.aberturas && cfg.modulos.aberturas_dinamicas && n.id === rootId && n.aberturas) {
-      const sk = stateKey(vh || visHerdada);
-      const defSk = stateKey(defState);
-      return fmt(n.aberturas[sk] || n.aberturas[defSk] || n.fala_npc);
-    }
-    return fmt(n.fala_npc);
-  };
-
-  const reiniciar = novaVis => {
-    const vh = novaVis || visHerdada;
-    const r = by[rootId];
-    setCurId(rootId);
-    setVisited(new Set([rootId]));
-    setTokens(aba === "VIES" ? 7 : aba === "INJECAO" ? 6 : 10);
-    setGanhos([]);
-    setDesconf(r?.desconfianca || 0);
-    setLog(r ? [{ role: "npc", speaker: npc.npc.falante || npc.npc.nome, text: getFalaNo(r, vh), nodeId: rootId }] : []);
-  };
-
-  useEffect(() => { reiniciar(visHerdada); }, []);
-  useEffect(() => {
-    const f = e => { if (e.key === "Escape") onClose(); };
-    window.addEventListener("keydown", f);
-    return () => window.removeEventListener("keydown", f);
-  }, []);
-
-  const cur = by[curId];
-  const escolhas = [];
-  if (cur && !cur.folha) {
-    A(cur.opcoes).forEach((o, i) => {
-      if (!o.proximo_no || !by[o.proximo_no]) return;
-      const isReturn = o.proximo_no === rootId;
-      if (!isReturn && visited.has(o.proximo_no)) return;
-      escolhas.push({ texto: fmt(o.texto), dest: o.proximo_no, req: null, cost: isReturn ? 0 : 1, key: "o" + i });
-    });
-    A(cur.desbloqueios).forEach((x, i) => {
-      const destNode = by[x.no];
-      if (!destNode || !ownedEvs.has(x.ev)) return;
-      if (x.no !== rootId && visited.has(x.no)) return;
-      escolhas.push({
-        texto: fmt(destNode.confronto_evidencia?.pergunta_jogador || "(usar " + x.ev + ")"),
-        dest: x.no,
-        req: x.ev,
-        cost: x.no === rootId ? 0 : 1,
-        key: "e" + i
-      });
-    });
-  }
-  const visiveis = cfg.modulos.export_turing_txt ? escolhas.slice(0, 4) : escolhas;
-
-  const escolher = c => {
-    if (tokens < c.cost) return;
-    const nxt = by[c.dest];
-    if (!nxt) return;
-    setTokens(t => t - c.cost);
-    setCurId(nxt.id);
-    setVisited(prev => new Set([...prev, nxt.id]));
-    if (nxt.evidencia_desbloqueada && !ganhos.includes(nxt.evidencia_desbloqueada)) {
-      setGanhos(g => [...g, nxt.evidencia_desbloqueada]);
-      setOwnedEvs(prev => new Set([...prev, nxt.evidencia_desbloqueada]));
-    }
-    if (nxt.desconfianca > 0) setDesconf(d => d + nxt.desconfianca);
-    setLog(l => [
-      ...l,
-      { role: "player", speaker: playerName, text: c.texto, req: c.req, cost: c.cost },
-      { role: "npc", speaker: npc.npc.falante || npc.npc.nome, text: getFalaNo(nxt), nodeId: nxt.id }
-    ]);
-  };
-
-  return h("div", { className: "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
-    h("div", { className: "w-full max-w-3xl border-2 border-cyan-400 bg-zinc-950 p-3 dt-card-shadow max-h-[92vh] flex flex-col", onClick: e => e.stopPropagation() },
-      h("div", { className: "flex justify-between items-center pb-2 border-b-2 border-zinc-700" },
-        h("span", { className: "glow text-2xl text-cyan-400" }, "▶ SIMULADOR · " + (npc.npc.nome || "NPC") + " · " + aba),
-        h("div", { className: "flex gap-2" },
-          h(Btn, { tone: "a", onClick: () => reiniciar(visHerdada) }, "↻ REINICIAR"),
-          h(Btn, { tone: "r", onClick: onClose }, "FECHAR [ESC]")
-        )
-      ),
-      h("div", { className: "flex flex-wrap gap-3 items-center py-2 border-b border-zinc-800 text-sm" },
-        h("div", { className: "flex items-center gap-1" },
-          h("span", { className: "text-zinc-400" }, "[nome]:"),
-          h("input", { className: inpCls + " !w-28", value: playerName, onChange: e => setPlayerName(e.target.value) })
-        ),
-        isScene && sc.aberturas && cfg.modulos.aberturas_dinamicas && h("div", { className: "flex items-center gap-1 flex-wrap" },
-          h("span", { className: "text-zinc-400" }, "Estado herdado:"),
-          cfg.estados_folha.map(est => {
-            const tn = TONE_MAP[est.cor] || TONE_MAP.a;
-            return h("button", {
-              key: est.nome,
-              type: "button",
-              onClick: () => { setVisHerdada(est.nome); reiniciar(est.nome); },
-              className: "px-1.5 py-0 border cursor-pointer " + (visHerdada === est.nome ? tn.b + " " + tn.t + " bg-zinc-900" : "border-zinc-700 text-zinc-500")
-            }, est.nome);
-          })
-        ),
-        h("span", { className: "ml-auto text-emerald-400 font-bold" }, "🪙 TOKENS: " + tokens),
-        desconf > 0 && h("span", { className: "text-rose-400 font-bold" }, (cfg.termos.metrica_icone || "👁") + " +" + desconf),
-        ganhos.map(g => h("span", { key: g, className: "text-amber-300" }, "🔓 " + g))
-      ),
-      cfg.modulos.inventario && A(npc.evidencias).length > 0 && h("div", { className: "flex flex-wrap gap-1.5 py-1.5 border-b border-zinc-800 text-sm items-center" },
-        h("span", { className: "text-zinc-500" }, "Itens ativos:"),
-        A(npc.evidencias).map(e => {
-          const on = ownedEvs.has(e.id);
-          return h("button", {
-            key: e.id,
-            type: "button",
-            onClick: () => setOwnedEvs(prev => { const n = new Set(prev); if (n.has(e.id)) n.delete(e.id); else n.add(e.id); return n; }),
-            title: e.nome,
-            className: "px-1.5 py-0 border cursor-pointer " + (on ? "border-cyan-400 text-cyan-300 bg-cyan-950/40" : "border-zinc-700 text-zinc-500 line-through")
-          }, e.id);
-        })
-      ),
-      h("div", { className: "flex-1 overflow-auto py-3 space-y-2 min-h-[220px]" },
-        log.map((m, idx) =>
-          h("div", { key: idx, className: "flex " + (m.role === "player" ? "justify-end" : "justify-start") },
-            h("div", {
-              className: "max-w-[82%] border-2 px-2.5 py-1.5 " + (m.role === "player" ? "border-emerald-500 bg-emerald-950/30 text-emerald-200" : "border-zinc-600 bg-zinc-900 text-zinc-200")
-            },
-              h("div", { className: "text-sm flex justify-between gap-3 " + (m.role === "player" ? "text-emerald-400" : "text-amber-400") },
-                h("span", null, m.speaker + (m.req ? " [🔍 " + m.req + "]" : "")),
-                h("span", { className: "text-zinc-500" }, m.nodeId ? "[" + m.nodeId + "]" : m.cost === 0 ? "0 tok" : "-" + m.cost + " tok")
-              ),
-              h("div", null, m.text || h("span", { className: "text-rose-400 italic" }, "(fala vazia)"))
-            )
-          )
-        ),
-        cur?.folha && (() => {
-          const tn = stateTone(cfg, cur.folha.visao_jogador);
-          return h("div", { className: "border-2 p-2 text-center uppercase " + tn.b + " " + tn.bg + " " + tn.t },
-            "■ FIM DA CONVERSA · RESULTADO: " + cur.folha.visao_jogador
-          );
-        })()
-      ),
-      !cur?.folha && h("div", { className: "pt-2 border-t-2 border-zinc-800 space-y-1" },
-        visiveis.length === 0 && h("div", { className: "text-rose-400 text-sm" }, "Sem escolhas disponíveis a partir deste nó."),
-        visiveis.map((c, idx) =>
-          h("button", {
-            key: c.key,
-            type: "button",
-            disabled: tokens < c.cost,
-            onClick: () => escolher(c),
-            className: "w-full text-left px-2.5 py-1 border-2 flex justify-between items-center gap-2 cursor-pointer disabled:opacity-40 " + (c.req ? "border-cyan-400 bg-cyan-950/30 text-cyan-200 hover:bg-cyan-400 hover:text-zinc-950" : "border-zinc-600 bg-zinc-900 text-emerald-300 hover:border-emerald-400")
-          },
-            h("span", null, (c.req ? "🔍 [" + c.req + "] " : (LET[idx] + ") ")) + (c.texto || "(opção vazia)")),
-            h("span", { className: "text-sm shrink-0 opacity-80" }, "-> " + c.dest + " (" + c.cost + " tok)")
-          )
-        )
+      h("div", { className: "pt-3 flex justify-between items-center", style: { borderTop: "1px solid var(--border-1)" } },
+        h("span", { className: "text-sm fg-2" }, "Finais: " + (cfg.estados_folha.length ? cfg.estados_folha.map(e => e.nome).join(", ") : "Fim Simples")),
+        h(Btn, { tone: "g", size: "sm", onClick: () => { onClose(); onOpenEndings(); } }, h(Icon, { name: "edit", size: 13 }), "Editar Finais")
       )
     )
   );
 }
 
-/* ==========================================================================
-   MODAL 4: EXPORTAÇÃO / IMPORTAÇÃO MULTIESCOPO (JOGO, NPC, SEMANA, ÁRVORE, TXT)
-   ========================================================================== */
-function DataModal({ game, activeNpc, aba, onClose, onOpenSmartFile, flash }) {
+function SaveExportModal({ game, activeNpc, aba, onClose, flash }) {
   const cfg = game.config;
   const groups = [...new Set(cfg.cenas.map(c => c.grupo).filter(Boolean))];
   const txtTargets = [...cfg.cenas.map(c => c.id), ...cfg.arvores_extras.map(e => e.id.toLowerCase())];
 
-  const [modo, setModo] = useState("npc_json");
-  // npc_json | game_json | pack_json | tree_json | runtime_json | turing_txt | script_txt
+  const [showAdv, setShowAdv] = useState(false);
+  const [advModo, setAdvModo] = useState(cfg.modulos.export_turing_txt ? "turing_txt" : "runtime_json");
   const [packGroup, setPackGroup] = useState(groups[0] || "");
   const [txtAlvo, setTxtAlvo] = useState(cfg.cenas.some(c => c.id === aba) ? aba : txtTargets[0] || "D1");
   const [msg, setMsg] = useState("");
-  const ref = useRef(null);
-  const fileRef = useRef(null);
-
-  const gerar = (m, pg, ta) => {
-    if (m === "npc_json") return JSON.stringify(toExportNpc(activeNpc, game), null, 2);
-    if (m === "game_json") return JSON.stringify(toExportGame(game), null, 2);
-    if (m === "pack_json") return JSON.stringify(toExportChapterPack(activeNpc, game, pg), null, 2);
-    if (m === "tree_json") return JSON.stringify(toExportSingleTree(activeNpc, game, aba), null, 2);
-    if (m === "runtime_json") return JSON.stringify(toExportRuntimeEngine(activeNpc, game), null, 2);
-    if (m === "turing_txt") return toTuringTxt(activeNpc, cfg, ta);
-    return toReadableScript(activeNpc, game, "__ALL__");
-  };
-
-  const [txt, setTxt] = useState(() => gerar("npc_json", packGroup, txtAlvo));
 
   useEffect(() => {
     const f = e => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", f);
     return () => window.removeEventListener("keydown", f);
   }, []);
-
-  const trocar = (m, pg, ta) => {
-    setModo(m);
-    setPackGroup(pg);
-    setTxtAlvo(ta);
-    setTxt(gerar(m, pg, ta));
-    setMsg("");
-  };
 
   const baseOf = npc => slug(npc.npc?.id || npc.npc?.falante || S(npc.npc?.nome).split(" ")[0]) || "npc";
   const nomeTxtOf = (npc, k) => {
@@ -2612,129 +2996,337 @@ function DataModal({ game, activeNpc, aba, onClose, onOpenSmartFile, flash }) {
     setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 600);
   };
 
-  const baixar = () => {
-    const gSlug = slug(game.game_id) || "jogo";
-    const nSlug = baseOf(activeNpc);
-    if (modo === "npc_json") {
-      const fn = (cfg.template === "turing_test" ? "turing_master_" : gSlug + "_npc_") + nSlug + ".json";
-      salvarArquivo(fn, txt, "application/json");
-      setMsg("BAIXADO: " + fn);
-    } else if (modo === "game_json") {
-      const fn = gSlug + "_jogo_completo.json";
-      salvarArquivo(fn, txt, "application/json");
-      setMsg("BAIXADO: " + fn);
-    } else if (modo === "pack_json") {
-      const fn = gSlug + "_" + nSlug + "_" + slug(packGroup || "cenas") + ".json";
-      salvarArquivo(fn, txt, "application/json");
-      setMsg("BAIXADO: " + fn);
-    } else if (modo === "tree_json") {
-      const fn = gSlug + "_" + nSlug + "_arvore_" + slug(aba) + ".json";
-      salvarArquivo(fn, txt, "application/json");
-      setMsg("BAIXADO: " + fn);
-    } else if (modo === "runtime_json") {
-      const fn = gSlug + "_" + nSlug + "_runtime.json";
-      salvarArquivo(fn, txt, "application/json");
-      setMsg("BAIXADO: " + fn);
-    } else if (modo === "turing_txt") {
-      const fn = nomeTxtOf(activeNpc, txtAlvo);
-      salvarArquivo(fn, txt, "text/plain");
-      setMsg("BAIXADO: " + fn);
-    } else {
-      const fn = gSlug + "_" + nSlug + "_roteiro.txt";
-      salvarArquivo(fn, txt, "text/plain");
-      setMsg("BAIXADO: " + fn);
+  const gSlug = slug(game.game_nome || game.game_id) || "papo";
+  const nSlug = baseOf(activeNpc);
+
+  const salvarDialogoAtual = () => {
+    const fn = gSlug + "_" + nSlug + "_dialogo_" + slug(aba) + ".json";
+    salvarArquivo(fn, JSON.stringify(toExportSingleTree(activeNpc, game, aba), null, 2), "application/json");
+    flash("Salvo Diálogo Atual: " + fn);
+    setMsg("Baixado: " + fn);
+  };
+
+  const salvarPersonagemAtual = () => {
+    const fn = gSlug + "_npc_" + nSlug + ".json";
+    salvarArquivo(fn, JSON.stringify(toExportNpc(activeNpc, game), null, 2), "application/json");
+    flash("Salvo NPC: " + fn);
+    setMsg("Baixado: " + fn);
+  };
+
+  const salvarArvoreGlobal = () => {
+    const fn = gSlug + "_arvore_global.json";
+    salvarArquivo(fn, JSON.stringify(toExportGame(game), null, 2), "application/json");
+    flash("Salva Árvore Global: " + fn);
+    setMsg("Baixado: " + fn);
+  };
+
+  const gerarAdv = () => {
+    if (advModo === "turing_txt") return toTuringTxt(activeNpc, cfg, txtAlvo);
+    if (advModo === "pack_json") return JSON.stringify(toExportChapterPack(activeNpc, game, packGroup), null, 2);
+    if (advModo === "runtime_json") return JSON.stringify(toExportRuntimeEngine(activeNpc, game), null, 2);
+    if (advModo === "script_txt") return toReadableScript(activeNpc, game);
+    return JSON.stringify(toExportGame(game), null, 2);
+  };
+
+  const advText = showAdv ? gerarAdv() : "";
+
+  const baixarAdv = () => {
+    if (advModo === "turing_txt") salvarArquivo(nomeTxtOf(activeNpc, txtAlvo), advText, "text/plain");
+    else if (advModo === "pack_json") salvarArquivo(gSlug + "_" + nSlug + "_" + slug(packGroup || "pacote") + ".json", advText, "application/json");
+    else if (advModo === "runtime_json") salvarArquivo(gSlug + "_" + nSlug + "_runtime.json", advText, "application/json");
+    else if (advModo === "script_txt") salvarArquivo(gSlug + "_" + nSlug + "_roteiro.txt", advText, "text/plain");
+    else salvarArvoreGlobal();
+  };
+
+  return h("div", { className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
+    h("div", { className: "w-full max-w-4xl dt-card p-6 max-h-[92vh] overflow-auto space-y-5", onClick: e => e.stopPropagation() },
+      h("div", { className: "flex justify-between items-center pb-3", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("h3", { className: "text-2xl font-bold fg-1 m-0" }, "O que você deseja salvar?"),
+        h(Btn, { tone: "z", size: "sm", onClick: onClose }, h(Icon, { name: "close", size: 15 }))
+      ),
+      h("div", { className: "grid grid-cols-1 md:grid-cols-3 gap-4" },
+        h("div", { className: "dt-panel p-4 flex flex-col justify-between" },
+          h("div", null,
+            h("div", { className: "text-lg font-bold fg-info mb-1" }, "1. Diálogo Atual"),
+            h("p", { className: "text-sm fg-2 mb-4" }, "Salva somente a árvore aberta agora (" + aba + " de " + activeNpc.npc.nome + ").")
+          ),
+          h(Btn, { tone: "c", extra: "w-full", onClick: salvarDialogoAtual }, h(Icon, { name: "download", size: 15 }), "Salvar Diálogo Atual")
+        ),
+        h("div", { className: "dt-panel p-4 flex flex-col justify-between" },
+          h("div", null,
+            h("div", { className: "text-lg font-bold fg-sec mb-1" }, "2. Este NPC Inteiro"),
+            h("p", { className: "text-sm fg-2 mb-4" }, "Salva todas as etapas, abas especiais e itens de " + activeNpc.npc.nome + ".")
+          ),
+          h(Btn, { tone: "a", extra: "w-full", onClick: salvarPersonagemAtual }, h(Icon, { name: "download", size: 15 }), "Salvar Este NPC")
+        ),
+        h("div", { className: "dt-panel p-4 flex flex-col justify-between tone-box-g", style: { border: "1px solid var(--pri)" } },
+          h("div", null,
+            h("div", { className: "text-lg font-bold fg-pri mb-1" }, "3. Árvore Global"),
+            h("p", { className: "text-sm fg-2 mb-4" }, "Salva todos os diálogos de todos os " + game.npcs.length + " NPC(s) em um único arquivo .JSON.")
+          ),
+          h(Btn, { tone: "g", extra: "w-full", onClick: salvarArvoreGlobal }, h(Icon, { name: "download", size: 15 }), "Salvar Árvore Global")
+        )
+      ),
+      h("div", { className: "pt-2", style: { borderTop: "1px solid var(--border-1)" } },
+        h(Btn, { tone: "z", extra: "w-full justify-between", onClick: () => setShowAdv(!showAdv) },
+          h("span", null, "Exportação Avançada (TXT Jogo C · Engine Runtime · Roteiro · Código Bruto)"),
+          h("span", { className: "fg-3" }, showAdv ? "Ocultar" : "Abrir")
+        ),
+        showAdv && h("div", { className: "mt-4 space-y-3" },
+          h("div", { className: "flex flex-wrap gap-2 items-center" },
+            cfg.modulos.export_turing_txt && h(Btn, { tone: "c", on: advModo === "turing_txt", onClick: () => setAdvModo("turing_txt") }, "TXT Jogo em C"),
+            groups.length > 0 && h(Btn, { tone: "a", on: advModo === "pack_json", onClick: () => setAdvModo("pack_json") }, "Pacote de Semana"),
+            h(Btn, { tone: "p", on: advModo === "runtime_json", onClick: () => setAdvModo("runtime_json") }, "Engine Runtime (.JSON)"),
+            h(Btn, { tone: "z", on: advModo === "script_txt", onClick: () => setAdvModo("script_txt") }, "Roteiro Legível (.TXT)"),
+            h(Btn, { tone: "g", on: advModo === "raw_global", onClick: () => setAdvModo("raw_global") }, "Ver JSON Global")
+          ),
+          advModo === "turing_txt" && h("div", { className: "flex flex-wrap items-center gap-2" },
+            h("select", { className: "dt-input !w-56", value: txtAlvo, onChange: e => setTxtAlvo(e.target.value) },
+              txtTargets.map(k => h("option", { key: k, value: k }, nomeTxtOf(activeNpc, k)))
+            ),
+            h(Btn, {
+              tone: "c",
+              onClick: () => txtTargets.forEach((k, i) => setTimeout(() => salvarArquivo(nomeTxtOf(activeNpc, k), toTuringTxt(activeNpc, cfg, k), "text/plain"), i * 240))
+            }, "Baixar Todos os TXTs deste NPC")
+          ),
+          h("textarea", { readOnly: true, value: advText, className: "dt-input h-52 font-mono text-xs" }),
+          h("div", { className: "flex gap-2" },
+            h(Btn, { tone: "z", onClick: async () => { try { await navigator.clipboard.writeText(advText); setMsg("Copiado para a área de transferência."); } catch (e) {} } }, "Copiar Texto"),
+            h(Btn, { tone: "c", onClick: baixarAdv }, h(Icon, { name: "download", size: 14 }), "Baixar Este Arquivo")
+          )
+        )
+      ),
+      msg && h("div", { className: "fg-pri text-sm font-semibold", role: "status" }, msg)
+    )
+  );
+}
+
+function SimModal({ game, npc, aba, onClose }) {
+  const cfg = game.config;
+  const sc = cfg.cenas.find(c => c.id === aba);
+  const ex = !sc ? cfg.arvores_extras.find(e => e.id === aba) : null;
+  const isScene = !!sc;
+  const rootChoicesOnly = !isScene && ex?.modo_raiz !== "fala";
+  const nos = isScene ? (npc.cenas?.[aba]?.nos || []) : (npc.extras?.[aba]?.nos || []);
+  const by = {};
+  A(nos).forEach(n => { by[n.id] = n; });
+  const rootId = nos[0]?.id || "Entrada";
+  const defState = defaultLeafName(cfg);
+
+  const initialNpcNat = (() => {
+    const s1v = npc.cenas?.D3?.veredito?.verdade;
+    if (s1v === "Sintético" || /sint[eé]tic|ia\b/i.test(S(npc.npc.tipo))) return "Sintético";
+    return "Humano";
+  })();
+
+  const [npcNatureza, setNpcNatureza] = useState(initialNpcNat);
+  const [visHerdada, setVisHerdada] = useState(defState);
+  const [ferramenta] = useState(!isScene ? aba.toLowerCase() : "nenhuma");
+  const [ownedEvs, setOwnedEvs] = useState(() => new Set(A(npc.evidencias).map(e => e.id)));
+  const [curId, setCurId] = useState(rootId);
+  const [visited, setVisited] = useState(() => new Set([rootId]));
+  const [log, setLog] = useState([]);
+  const [desconf, setDesconf] = useState(0);
+
+  const playerName = game.nome_jogador || "Jogador";
+  const fmt = txt => S(txt).replace(/\[nome\]/g, playerName);
+
+  const makeCtx = ov => ({
+    npcNatureza,
+    visao: visHerdada,
+    ferramenta,
+    ownedEvs,
+    desconf,
+    customTrue: true,
+    ...(ov || {})
+  });
+
+  const resolveFala = (n, ctx) => {
+    if (!n) return { text: "", ifHit: null };
+    for (const fc of A(n.fala_condicional)) {
+      if (S(fc.fala).trim() && evalCondInSim(fc.cond, ctx)) {
+        return { text: fmt(fc.fala), ifHit: condHumanLabel(fc.cond) };
+      }
     }
+    if (isScene && sc.aberturas && cfg.modulos.aberturas_dinamicas && cfg.estados_folha.length > 0 && n.id === rootId && n.aberturas) {
+      const sk = stateKey(ctx.visao || defState);
+      const defSk = stateKey(defState);
+      return { text: fmt(n.aberturas[sk] || n.aberturas[defSk] || n.fala_npc), ifHit: null };
+    }
+    return { text: fmt(n.fala_npc), ifHit: null };
   };
 
-  const baixarTxtsNpc = () => {
-    txtTargets.forEach((k, i) => setTimeout(() => salvarArquivo(nomeTxtOf(activeNpc, k), toTuringTxt(activeNpc, cfg, k), "text/plain"), i * 240));
-    setMsg("BAIXANDO " + txtTargets.length + " ARQUIVOS .TXT DE " + activeNpc.npc.nome.toUpperCase());
+  const advanceThroughIfs = (startId, ctx) => {
+    const steps = [];
+    let curr = by[startId];
+    let guard = 0;
+    while (curr && curr.condicional && guard < 12) {
+      guard += 1;
+      const res = evalCondInSim(curr.condicional.cond, ctx);
+      const nextId = res ? curr.condicional.se_verdadeiro : curr.condicional.se_falso;
+      steps.push({
+        role: "sys",
+        text: "IF: " + condHumanLabel(curr.condicional.cond) + " -> " + (res ? "VERDADEIRO" : "FALSO") + " (" + (nextId || "?") + ")"
+      });
+      curr = nextId ? by[nextId] : null;
+    }
+    return { finalNode: curr, steps };
   };
 
-  const baixarTxtsTodos = () => {
-    let delay = 0;
-    game.npcs.forEach(np => {
-      txtTargets.forEach(k => {
-        setTimeout(() => salvarArquivo(nomeTxtOf(np, k), toTuringTxt(np, cfg, k), "text/plain"), delay);
-        delay += 210;
+  const reiniciar = ov => {
+    const ctx = makeCtx(ov);
+    const { finalNode, steps } = advanceThroughIfs(rootId, ctx);
+    setCurId(finalNode?.id || rootId);
+    setVisited(new Set([rootId, ...(finalNode ? [finalNode.id] : [])]));
+    const d0 = finalNode?.desconfianca || 0;
+    setDesconf(d0);
+    const rf = resolveFala(finalNode, { ...ctx, desconf: d0 });
+    const showInitialNpcMsg = finalNode && !(rootChoicesOnly && finalNode.id === rootId && !S(rf.text).trim());
+    setLog([
+      ...steps,
+      ...(showInitialNpcMsg ? [{ role: "npc", speaker: npc.npc.falante || npc.npc.nome, text: rf.text, ifHit: rf.ifHit, nodeId: finalNode.id }] : [])
+    ]);
+  };
+
+  useEffect(() => { reiniciar(); }, []);
+  useEffect(() => {
+    const f = e => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", f);
+    return () => window.removeEventListener("keydown", f);
+  }, []);
+
+  const cur = by[curId];
+  const ctxNow = makeCtx();
+  const escolhas = [];
+  if (cur && !cur.folha && !cur.condicional) {
+    A(cur.opcoes).forEach((o, i) => {
+      if (!o.proximo_no || !by[o.proximo_no]) return;
+      if (o.cond && !evalCondInSim(o.cond, ctxNow)) return;
+      const isReturn = o.proximo_no === rootId;
+      if (!isReturn && visited.has(o.proximo_no)) return;
+      escolhas.push({ texto: fmt(o.texto), dest: o.proximo_no, req: null, ifCond: o.cond ? condHumanLabel(o.cond) : null, key: "o" + i });
+    });
+    A(cur.desbloqueios).forEach((x, i) => {
+      const destNode = by[x.no];
+      if (!destNode || !ownedEvs.has(x.ev)) return;
+      if (x.no !== rootId && visited.has(x.no)) return;
+      escolhas.push({
+        texto: fmt(destNode.confronto_evidencia?.pergunta_jogador || "(usar " + x.ev + ")"),
+        dest: x.no,
+        req: x.ev,
+        ifCond: null,
+        key: "e" + i
       });
     });
-    setMsg("BAIXANDO " + (game.npcs.length * txtTargets.length) + " ARQUIVOS .TXT DE TODOS OS PERSONAGENS");
-  };
+  }
+  const visiveis = cfg.modulos.export_turing_txt ? escolhas.slice(0, 4) : escolhas;
 
-  const copiar = async () => {
-    try { await navigator.clipboard.writeText(txt); setMsg("COPIADO COM SUCESSO!"); }
-    catch (e) { setMsg("CÓPIA BLOQUEADA: pressione Ctrl+C."); try { ref.current && ref.current.select(); } catch (_) {} }
-  };
-
-  const importarTexto = rawStr => {
-    try {
-      const parsed = JSON.parse(rawStr);
-      const det = detectImportedFile(parsed);
-      onOpenSmartFile(det);
-      onClose();
-    } catch (e) {
-      setMsg("JSON INVÁLIDO: " + (e && e.message ? e.message : "verifique o conteúdo"));
+  const escolher = c => {
+    const { finalNode, steps } = advanceThroughIfs(c.dest, ctxNow);
+    if (!finalNode) return;
+    setCurId(finalNode.id);
+    setVisited(prev => new Set([...prev, c.dest, finalNode.id]));
+    let nextOwned = ownedEvs;
+    if (finalNode.evidencia_desbloqueada) {
+      nextOwned = new Set([...ownedEvs, finalNode.evidencia_desbloqueada]);
+      setOwnedEvs(nextOwned);
     }
+    const nextDesc = desconf + (finalNode.desconfianca || 0);
+    if (finalNode.desconfianca > 0) setDesconf(nextDesc);
+    const nextVis = finalNode.folha ? finalNode.folha.visao_jogador : visHerdada;
+    if (finalNode.folha && nextVis) setVisHerdada(nextVis);
+
+    const rf = resolveFala(finalNode, { ...ctxNow, ownedEvs: nextOwned, desconf: nextDesc, visao: nextVis });
+    setLog(l => [
+      ...l,
+      { role: "player", speaker: playerName, text: c.texto, req: c.req },
+      ...steps,
+      { role: "npc", speaker: npc.npc.falante || npc.npc.nome, text: rf.text, ifHit: rf.ifHit, nodeId: finalNode.id }
+    ]);
   };
 
-  return h("div", { className: "fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
-    h("div", { className: "w-full max-w-4xl border-2 border-emerald-500 bg-zinc-950 p-3 dt-card-shadow max-h-[92vh] overflow-auto", onClick: e => e.stopPropagation() },
-      h("div", { className: "flex justify-between items-center mb-2" },
-        h("span", { className: "glow text-2xl text-emerald-400" }, "💾 EXPORTAR / IMPORTAR · " + game.game_nome.toUpperCase()),
-        h(Btn, { tone: "r", onClick: onClose }, "FECHAR [ESC]")
-      ),
-      h("div", { className: "flex flex-wrap gap-1.5 mb-2 items-center" },
-        h(Btn, { tone: "g", on: modo === "npc_json", onClick: () => trocar("npc_json", packGroup, txtAlvo) }, "👤 NPC ATUAL (.JSON)"),
-        h(Btn, { tone: "p", on: modo === "game_json", onClick: () => trocar("game_json", packGroup, txtAlvo) }, "🎮 JOGO INTEIRO (.JSON)"),
-        h(Btn, { tone: "a", on: modo === "pack_json", onClick: () => trocar("pack_json", packGroup, txtAlvo) }, "📅 SEMANA / PACOTE (.JSON)"),
-        h(Btn, { tone: "a", on: modo === "tree_json", onClick: () => trocar("tree_json", packGroup, txtAlvo) }, "🌿 ÁRVORE '" + aba + "' (.JSON)"),
-        h(Btn, { tone: "c", on: modo === "runtime_json", onClick: () => trocar("runtime_json", packGroup, txtAlvo) }, "⚙️ ENGINE RUNTIME (.JSON)"),
-        cfg.modulos.export_turing_txt && h(Btn, { tone: "c", on: modo === "turing_txt", onClick: () => trocar("turing_txt", packGroup, txtAlvo) }, "📄 TXT JOGO C"),
-        h(Btn, { tone: "z", on: modo === "script_txt", onClick: () => trocar("script_txt", packGroup, txtAlvo) }, "📜 ROTEIRO (.TXT)")
-      ),
-      modo === "pack_json" && groups.length > 0 && h("div", { className: "flex items-center gap-2 mb-2 text-sm" },
-        h("span", { className: "text-zinc-400" }, "Grupo / Semana:"),
-        h("select", { className: inpCls + " !w-48", value: packGroup, onChange: e => trocar("pack_json", e.target.value, txtAlvo) },
-          groups.map(g => h("option", { key: g, value: g }, g)),
-          h("option", { value: "" }, "Todas as cenas")
+  return h("div", { className: "fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4", role: "dialog", "aria-modal": "true", onClick: onClose },
+    h("div", { className: "w-full max-w-3xl dt-card p-5 max-h-[92vh] flex flex-col", onClick: e => e.stopPropagation() },
+      h("div", { className: "flex justify-between items-center pb-3", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("span", { className: "text-xl font-bold fg-1" }, "Simulador · " + (npc.npc.nome || "NPC") + " · " + aba),
+        h("div", { className: "flex gap-2" },
+          h(Btn, { tone: "a", size: "sm", onClick: () => reiniciar() }, "Reiniciar"),
+          h(Btn, { tone: "z", size: "sm", onClick: onClose }, h(Icon, { name: "close", size: 15 }))
         )
       ),
-      modo === "turing_txt" && h("div", { className: "flex items-center gap-2 mb-2 text-sm" },
-        h("span", { className: "text-zinc-400" }, "Arquivo TXT:"),
-        h("select", { className: inpCls + " !w-56", value: txtAlvo, onChange: e => trocar("turing_txt", packGroup, e.target.value) },
-          txtTargets.map(k => h("option", { key: k, value: k }, nomeTxtOf(activeNpc, k)))
+      h("div", { className: "flex flex-wrap gap-2 items-center py-2.5 text-sm", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("span", { className: "fg-2" }, "Natureza NPC:"),
+        ["Humano", "Sintético"].map(nat =>
+          h(Btn, {
+            key: nat,
+            tone: "p",
+            size: "sm",
+            on: npcNatureza === nat,
+            onClick: () => { setNpcNatureza(nat); reiniciar({ npcNatureza: nat }); }
+          }, nat)
+        ),
+        cfg.estados_folha.length > 0 && h("span", { className: "fg-2 ml-2" }, "Estado:"),
+        cfg.estados_folha.map(est =>
+          h(Btn, {
+            key: est.nome,
+            tone: est.cor || "a",
+            size: "sm",
+            on: visHerdada === est.nome,
+            onClick: () => { setVisHerdada(est.nome); reiniciar({ visao: est.nome }); }
+          }, est.nome)
+        ),
+        cfg.modulos.metrica_global && h("span", { className: "ml-auto fg-danger font-bold" }, (cfg.termos.metrica_nome || "Métrica") + ": " + desconf)
+      ),
+      cfg.modulos.inventario && A(npc.evidencias).length > 0 && h("div", { className: "flex flex-wrap gap-1.5 py-2 text-xs items-center", style: { borderBottom: "1px solid var(--border-1)" } },
+        h("span", { className: "fg-2" }, "Itens em posse:"),
+        A(npc.evidencias).map(e => {
+          const on = ownedEvs.has(e.id);
+          return h(Btn, {
+            key: e.id,
+            tone: on ? "c" : "z",
+            size: "sm",
+            onClick: () => setOwnedEvs(prev => { const n = new Set(prev); if (n.has(e.id)) n.delete(e.id); else n.add(e.id); return n; })
+          }, e.id);
+        })
+      ),
+      h("div", { className: "flex-1 overflow-auto py-4 space-y-2.5 min-h-[220px]" },
+        log.map((m, idx) =>
+          m.role === "sys"
+            ? h("div", { key: idx, className: "text-center text-xs fg-spec py-1 px-3 rounded tone-box-p" }, m.text)
+            : h("div", { key: idx, className: "flex " + (m.role === "player" ? "justify-end" : "justify-start") },
+                h("div", {
+                  className: "max-w-[82%] rounded px-3.5 py-2.5 " + (m.role === "player" ? "tone-box-g" : ""),
+                  style: m.role === "player" ? { border: "1px solid var(--pri)" } : { backgroundColor: "var(--bg-surface)", border: "1px solid var(--border-2)" }
+                },
+                  h("div", { className: "text-xs font-bold flex justify-between gap-4 mb-1 " + (m.role === "player" ? "fg-pri" : "fg-sec") },
+                    h("span", null, m.speaker + (m.req ? " [REQ " + m.req + "]" : "") + (m.ifHit ? " [IF " + m.ifHit + "]" : "")),
+                    m.nodeId && h("span", { className: "fg-3" }, m.nodeId)
+                  ),
+                  h("div", { className: "fg-1" }, m.text || h("span", { className: "fg-danger italic" }, "(fala vazia)"))
+                )
+              )
+        ),
+        cur?.folha && (() => {
+          const tn = stateTone(cfg, cur.folha.visao_jogador);
+          return h("div", { className: "rounded p-2.5 text-center font-bold uppercase text-sm " + tn.boxCls + " " + tn.textCls, style: { border: "1px solid var(--border-2)" } },
+            "Fim do Diálogo" + (cur.folha.visao_jogador ? " · " + cur.folha.visao_jogador : "")
+          );
+        })()
+      ),
+      !cur?.folha && h("div", { className: "pt-3 space-y-1.5", style: { borderTop: "1px solid var(--border-1)" } },
+        visiveis.length === 0 && h("div", { className: "fg-danger text-sm" }, "Sem escolhas disponíveis a partir deste nó."),
+        visiveis.map((c, idx) =>
+          h(Btn, {
+            key: c.key,
+            tone: c.req ? "c" : "z",
+            extra: "w-full justify-between text-left",
+            onClick: () => escolher(c)
+          },
+            h("span", null, (c.req ? "[REQ " + c.req + "] " : (LET[idx] + ") ")) + (c.ifCond ? "[IF " + c.ifCond + "] " : "") + (c.texto || "(opção vazia)")),
+            h("span", { className: "text-xs fg-3 shrink-0" }, "-> " + c.dest)
+          )
         )
-      ),
-      h("textarea", {
-        ref,
-        value: txt,
-        spellCheck: false,
-        onChange: e => setTxt(e.target.value),
-        className: "w-full h-72 bg-zinc-950 border-2 border-zinc-700 text-emerald-300 p-2 text-base focus:border-cyan-400 font-mono"
-      }),
-      h("div", { className: "flex flex-wrap gap-2 mt-2 items-center" },
-        h(Btn, { tone: "g", onClick: copiar }, "COPIAR"),
-        h(Btn, { tone: "c", onClick: baixar }, "⬇ BAIXAR ARQUIVO"),
-        modo === "turing_txt" && h(Btn, { tone: "c", onClick: baixarTxtsNpc }, "BAIXAR TXTs DE " + (activeNpc.npc.falante || "NPC").toUpperCase()),
-        modo === "turing_txt" && game.npcs.length > 1 && h(Btn, { tone: "p", onClick: baixarTxtsTodos }, "BAIXAR TODOS OS TXTs (" + (game.npcs.length * txtTargets.length) + ")"),
-        modo.endsWith("_json") && modo !== "runtime_json" && h(Btn, { tone: "a", onClick: () => importarTexto(txt) }, "IMPORTAR TEXTO ACIMA (AUTO-DETECTAR)"),
-        h("input", {
-          ref: fileRef,
-          type: "file",
-          accept: ".json,application/json",
-          className: "hidden",
-          onChange: ev => {
-            const f = ev.target.files?.[0];
-            if (!f) return;
-            const r = new FileReader();
-            r.onload = () => importarTexto(String(r.result || ""));
-            r.readAsText(f, "utf-8");
-          }
-        }),
-        h(Btn, { tone: "a", extra: "ml-auto", onClick: () => fileRef.current && fileRef.current.click() }, "📂 ABRIR .JSON DO DISCO")
-      ),
-      msg && h("div", { className: "mt-2 text-amber-400", role: "status" }, "> " + msg)
+      )
     )
   );
 }
@@ -2742,39 +3334,36 @@ function DataModal({ game, activeNpc, aba, onClose, onOpenSmartFile, flash }) {
 /* ==========================================================================
    APP PRINCIPAL
    ========================================================================== */
-function App({ initialBoot }) {
-  const [reg, setReg] = useState(() => initialBoot.reg);
-  const [game, setGame] = useState(() => initialBoot.game);
+function App() {
+  const [reg, setReg] = useState(() => loadRegistry());
+  const [menuTheme, setMenuTheme] = useState(() => oneOf(lsGet(K_THEME_PREF), THEME_IDS, DEFAULT_THEME));
+  const [screen, setScreen] = useState("menu");
+  const [game, setGame] = useState(null);
+
   const [sel, setSel] = useState(null);
   const [zoom, setZoom] = useState(1);
-  const [hubOpen, setHubOpen] = useState(false);
+  const [editingTab, setEditingTab] = useState(false);
+  const [renamingNpc, setRenamingNpc] = useState(false);
   const [cfgOpen, setCfgOpen] = useState(false);
-  const [dataOpen, setDataOpen] = useState(false);
+  const [endingsOpen, setEndingsOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
   const [simOpen, setSimOpen] = useState(false);
   const [toast, setToast] = useState("");
   const [saved, setSaved] = useState({ ok: true, at: "" });
+  const headerFileRef = useRef(null);
 
-  const cfg = game.config;
-  const npcIdx = Math.min(game.npcs.length - 1, Math.max(0, game.npc_ativo || 0));
-  const data = game.npcs[npcIdx] || game.npcs[0];
+  const activeTheme = screen === "editor" && game?.config?.theme ? game.config.theme : menuTheme;
 
-  const allAbas = [...cfg.cenas.map(c => c.id), ...cfg.arvores_extras.map(e => e.id)];
-  const aba = allAbas.includes(data.aba) ? data.aba : (cfg.cenas[0]?.id || "D1");
-  const curScIdx = cfg.cenas.findIndex(c => c.id === aba);
-  const curSc = curScIdx >= 0 ? cfg.cenas[curScIdx] : null;
-  const curEx = !curSc ? cfg.arvores_extras.find(e => e.id === aba) : null;
-  const evs = A(data.evidencias);
+  useEffect(() => {
+    const th = oneOf(activeTheme, THEME_IDS, DEFAULT_THEME);
+    document.documentElement.setAttribute("data-theme", th);
+    lsSet(K_THEME_PREF, th);
+  }, [activeTheme]);
 
   const flash = m => { setToast(m); setTimeout(() => setToast(""), 2800); };
 
-  // Aplica tema ativo no <html>
   useEffect(() => {
-    const th = oneOf(cfg.theme, THEME_IDS, "turing_crt");
-    document.documentElement.setAttribute("data-theme", th);
-  }, [cfg.theme]);
-
-  // Salva o jogo ativo de forma isolada em dtools-game-v2:<game_id>
-  useEffect(() => {
+    if (!game) return;
     window.__turingState = game;
     const s = JSON.stringify(game);
     const ok = lsSet(K_GAME_PREFIX + game.game_id, s);
@@ -2792,7 +3381,7 @@ function App({ initialBoot }) {
         updatedAt: at
       };
       const ix = nextList.findIndex(x => x.id === game.game_id);
-      if (ix >= 0) nextList[ix] = entry; else nextList.push(entry);
+      if (ix >= 0) nextList[ix] = entry; else nextList.unshift(entry);
       const nextReg = { activeId: game.game_id, list: nextList };
       saveRegistry(nextReg);
       return nextReg;
@@ -2802,11 +3391,158 @@ function App({ initialBoot }) {
     return () => clearTimeout(t);
   }, [game]);
 
+  const handleOpenSaved = id => {
+    const loaded = loadGameById(id);
+    if (!loaded) {
+      flash("Não foi possível abrir este papo salvo.");
+      return;
+    }
+    setSel(null);
+    setEditingTab(false);
+    setGame(loaded);
+    setScreen("editor");
+  };
+
+  const handleDeleteSaved = id => {
+    lsDel(K_GAME_PREFIX + id);
+    lsDel(K_GOOD_PREFIX + id);
+    const nextList = reg.list.filter(x => x.id !== id);
+    const nextActive = reg.activeId === id ? (nextList[0]?.id || "") : reg.activeId;
+    const nextReg = { activeId: nextActive, list: nextList };
+    saveRegistry(nextReg);
+    setReg(nextReg);
+  };
+
+  const loadJsonIntoApp = (rawText, insideEditor) => {
+    const parsed = JSON.parse(rawText);
+    const det = detectImportedFile(parsed);
+    setSel(null);
+    setEditingTab(false);
+
+    if (det.kind === "game") {
+      const norm = normalizeGame(det.payload, menuTheme);
+      setGame(norm);
+      setScreen("editor");
+      flash("Árvore Global carregada: " + norm.game_nome);
+      return;
+    }
+
+    if (det.kind === "npc") {
+      if (insideEditor && game) {
+        setGame(prev => {
+          const c = clone(prev);
+          const imp = normalizeNpc(det.payload, c.config);
+          const ix = c.npcs.findIndex(x => x.npc.id === imp.npc.id || slug(x.npc.nome) === slug(imp.npc.nome));
+          if (ix >= 0) { c.npcs[ix] = imp; c.npc_ativo = ix; }
+          else { c.npcs.push(imp); c.npc_ativo = c.npcs.length - 1; }
+          return normalizeGame(c, c.config.theme);
+        });
+        flash("NPC carregado: " + det.npcName);
+      } else {
+        const cfg = det.isTuringNpc ? makeTuringConfig(menuTheme) : makeSimpleCleanConfig(menuTheme);
+        const ng = createGameFromCustomConfig(det.gameName || ("Papo · " + det.npcName), cfg, 3);
+        ng.npcs = [normalizeNpc(det.payload, ng.config)];
+        ng.npc_ativo = 0;
+        setGame(normalizeGame(ng, menuTheme));
+        setScreen("editor");
+        flash("Papo carregado: " + det.npcName);
+      }
+      return;
+    }
+
+    if (det.kind === "chapter_pack") {
+      const baseGame = (insideEditor && game) ? clone(game) : createGameFromCustomConfig(det.gameName || "Papo Carregado", makeTuringConfig(menuTheme), 3);
+      const targetIdx = baseGame.npc_ativo || 0;
+      const list = A(det.payload.cenas_pack || det.payload.dias);
+      list.forEach(item => {
+        if (!item?.id) return;
+        if (!baseGame.config.cenas.some(c => c.id === item.id)) {
+          baseGame.config.cenas.push({ id: item.id, rotulo: item.rotulo || item.id, grupo: item.grupo || "", aberturas: false, matriz: false, veredito: false });
+        }
+        const scCfg = baseGame.config.cenas.find(c => c.id === item.id);
+        const normT = normTree(item.arvore?.nos || item.nos, [N("Entrada", "Abertura", "", [])], true, !!(baseGame.config.modulos.aberturas_dinamicas && scCfg?.aberturas), baseGame.config);
+        baseGame.npcs[targetIdx].cenas[item.id] = { nos: normT.nos, matriz: A(item.matriz), veredito: item.veredito || null };
+      });
+      if (list[0]?.id) baseGame.npcs[targetIdx].aba = list[0].id;
+      setGame(normalizeGame(baseGame, menuTheme));
+      setScreen("editor");
+      flash("Pacote carregado.");
+      return;
+    }
+
+    if (det.kind === "single_tree") {
+      const baseGame = (insideEditor && game) ? clone(game) : createGameFromCustomConfig(det.gameName || "Papo Carregado", makeTuringConfig(menuTheme), 3);
+      const targetIdx = baseGame.npc_ativo || 0;
+      const np = baseGame.npcs[targetIdx];
+      const destAba = det.targetId || np.aba || baseGame.config.cenas[0]?.id || "D1";
+      const scCfg = baseGame.config.cenas.find(c => c.id === destAba);
+      const exCfg = baseGame.config.arvores_extras.find(e => e.id === destAba);
+      if (!scCfg && !exCfg) {
+        baseGame.config.cenas.push({ id: destAba, rotulo: destAba, grupo: "", aberturas: false, matriz: false, veredito: false });
+      }
+      const isSc = !exCfg;
+      const hasAb = !!(isSc && baseGame.config.modulos.aberturas_dinamicas && scCfg?.aberturas);
+      const normT = normTree(det.payload.nos, [N(isSc ? "Entrada" : "Raiz", "Abertura", "", [])], isSc, hasAb, baseGame.config);
+      if (isSc) np.cenas[destAba] = { nos: normT.nos, matriz: A(det.payload.matriz), veredito: det.payload.veredito || null };
+      else np.extras[destAba] = { nos: normT.nos };
+      np.aba = destAba;
+      setGame(normalizeGame(baseGame, menuTheme));
+      setScreen("editor");
+      flash("Diálogo '" + destAba + "' carregado.");
+    }
+  };
+
+  if (screen === "menu") {
+    return h("div", null,
+      h(TitleScreen, {
+        reg,
+        currentTheme: menuTheme,
+        onThemeChange: th => setMenuTheme(th),
+        onGoNewPapo: () => setScreen("new_papo"),
+        onContinuePapo: handleOpenSaved,
+        onSelectSavedPapo: handleOpenSaved,
+        onDeleteSavedPapo: handleDeleteSaved,
+        onLoadFileText: txt => loadJsonIntoApp(txt, false)
+      }),
+      toast && h("div", { className: "fixed right-5 bottom-5 z-50 dt-card px-4 py-2.5 font-semibold fg-pri", style: { borderColor: "var(--pri)" }, role: "status" }, toast)
+    );
+  }
+
+  if (screen === "new_papo" || !game) {
+    return h("div", null,
+      h(NewPapoScreen, {
+        currentTheme: menuTheme,
+        onThemeChange: th => setMenuTheme(th),
+        onCancel: () => setScreen("menu"),
+        onConfirmCreate: (nome, cfg) => {
+          const ng = createGameFromCustomConfig(nome, cfg, 3);
+          setSel(null);
+          setEditingTab(false);
+          setGame(ng);
+          setScreen("editor");
+          flash("Projeto iniciado.");
+        }
+      }),
+      toast && h("div", { className: "fixed right-5 bottom-5 z-50 dt-card px-4 py-2.5 font-semibold fg-pri", style: { borderColor: "var(--pri)" }, role: "status" }, toast)
+    );
+  }
+
+  const cfg = game.config;
+  const npcIdx = Math.min(game.npcs.length - 1, Math.max(0, game.npc_ativo || 0));
+  const data = game.npcs[npcIdx] || game.npcs[0];
+
+  const allAbas = [...cfg.cenas.map(c => c.id), ...cfg.arvores_extras.map(e => e.id)];
+  const aba = allAbas.includes(data.aba) ? data.aba : (cfg.cenas[0]?.id || "D1");
+  const curScIdx = cfg.cenas.findIndex(c => c.id === aba);
+  const curSc = curScIdx >= 0 ? cfg.cenas[curScIdx] : null;
+  const curEx = !curSc ? cfg.arvores_extras.find(e => e.id === aba) : null;
+  const evs = A(data.evidencias);
+
   const updGame = fn => setGame(prev => {
     try {
       const c = clone(prev);
       fn(c);
-      const next = normalizeGame(c);
+      const next = normalizeGame(c, c.config?.theme);
       window.__turingPending = next;
       return next;
     } catch (e) {
@@ -2815,14 +3551,8 @@ function App({ initialBoot }) {
     }
   });
 
-  const updNpc = fn => updGame(g => {
-    const target = g.npcs[npcIdx];
-    if (target) fn(target);
-  });
-
-  const updCena = fn => updNpc(d => {
-    if (curSc && d.cenas?.[curSc.id]) fn(d.cenas[curSc.id]);
-  });
+  const updNpc = fn => updGame(g => { const target = g.npcs[npcIdx]; if (target) fn(target); });
+  const updCena = fn => updNpc(d => { if (curSc && d.cenas?.[curSc.id]) fn(d.cenas[curSc.id]); });
 
   const activeTreeObj = d => curSc ? d.cenas?.[curSc.id] : d.extras?.[aba];
   const updTreeIn = fn => updNpc(d => { const t = activeTreeObj(d); if (t) fn(t); });
@@ -2856,187 +3586,107 @@ function App({ initialBoot }) {
     focusNodeDom(targetAba || cfg.cenas[0]?.id, nodeId);
   };
 
-  /* Gerenciamento Multi-Jogo e Aplicação do Auto-Detector */
-  const switchGame = targetId => {
-    if (targetId === game.game_id) return;
-    const loaded = loadGameById(targetId);
-    if (loaded) {
-      setSel(null);
-      setGame(loaded);
-      flash("Jogo aberto: " + loaded.game_nome);
-    }
+  const adicionarNovaEtapa = () => {
+    let novoIdCena = "";
+    updGame(g => {
+      const k = g.config.cenas.length + 1;
+      novoIdCena = "D" + k;
+      while (g.config.cenas.some(z => z.id === novoIdCena)) novoIdCena += "_2";
+      g.config.cenas.push({
+        id: novoIdCena,
+        rotulo: "Dia " + k,
+        grupo: "",
+        aberturas: !!(g.config.modulos.aberturas_dinamicas && g.config.estados_folha.length > 0),
+        matriz: false,
+        veredito: false
+      });
+      g.npcs[npcIdx].aba = novoIdCena;
+    });
+    setEditingTab(true);
   };
 
-  const createGame = (nome, tpl, th) => {
-    const ng = createNewGame(nome, tpl, th);
-    setSel(null);
-    setGame(ng);
-  };
-
-  const deleteGame = targetId => {
-    if (targetId === TURING_OFFICIAL_ID) return;
-    lsDel(K_GAME_PREFIX + targetId);
-    lsDel(K_GOOD_PREFIX + targetId);
-    const nextList = reg.list.filter(x => x.id !== targetId);
-    const nextActive = game.game_id === targetId ? TURING_OFFICIAL_ID : game.game_id;
-    const nextReg = { activeId: nextActive, list: nextList };
-    saveRegistry(nextReg);
-    setReg(nextReg);
-    if (game.game_id === targetId) {
-      setSel(null);
-      setGame(loadGameById(TURING_OFFICIAL_ID) || buildOfficialTuringGame());
-    }
-    flash("Jogo removido do navegador.");
-  };
-
-  const applyDetectedFile = (det, mode, optNpcIdx) => {
-    setSel(null);
-    if (det.kind === "game") {
-      const norm = normalizeGame(det.payload);
-      if (mode === "clone_game") {
-        norm.game_id = slug(norm.game_nome) + "_" + Math.random().toString(36).slice(2, 6);
-        norm.game_nome = norm.game_nome + " (Cópia)";
-      }
-      setGame(norm);
-      flash("Jogo carregado: " + norm.game_nome);
-      return;
-    }
-
-    if (det.kind === "npc") {
-      if (mode === "npc_into_turing") {
-        const turingGame = loadGameById(TURING_OFFICIAL_ID) || buildOfficialTuringGame();
-        const imp = normalizeNpc(det.payload, turingGame.config);
-        const ix = turingGame.npcs.findIndex(x => x.npc.id === imp.npc.id || slug(x.npc.nome) === slug(imp.npc.nome));
-        if (ix >= 0) { turingGame.npcs[ix] = imp; turingGame.npc_ativo = ix; }
-        else { turingGame.npcs.push(imp); turingGame.npc_ativo = turingGame.npcs.length - 1; }
-        setGame(normalizeGame(turingGame));
-        flash("Importado no Turing Test: " + imp.npc.nome);
-        return;
-      }
-      if (mode === "npc_as_new_game") {
-        const tpl = det.isTuringNpc ? "turing_test" : "livre";
-        const ng = createNewGame(det.gameName || ("Projeto " + det.npcName), tpl, det.isTuringNpc ? "turing_crt" : "quill_tree");
-        ng.npcs = [normalizeNpc(det.payload, ng.config)];
-        ng.npc_ativo = 0;
-        setGame(normalizeGame(ng));
-        flash("Novo jogo criado com " + det.npcName);
-        return;
-      }
-      // npc_into_current
-      updGame(g => {
-        const imp = normalizeNpc(det.payload, g.config);
-        const ix = g.npcs.findIndex(x => x.npc.id === imp.npc.id || slug(x.npc.nome) === slug(imp.npc.nome));
-        if (ix >= 0) { g.npcs[ix] = imp; g.npc_ativo = ix; }
-        else { g.npcs.push(imp); g.npc_ativo = g.npcs.length - 1; }
+  const adicionarNovaAbaEspecial = () => {
+    let novoIdEx = "";
+    updGame(g => {
+      let k = g.config.arvores_extras.length + 1;
+      novoIdEx = "ESPECIAL_" + k;
+      while (g.config.arvores_extras.some(z => z.id === novoIdEx)) { k += 1; novoIdEx = "ESPECIAL_" + k; }
+      g.config.arvores_extras.push({
+        id: novoIdEx,
+        rotulo: "Especial " + k,
+        cor: "p",
+        modo_raiz: "escolhas",
+        sub: ""
       });
-      flash("Personagem importado: " + det.npcName);
-      return;
-    }
-
-    if (det.kind === "chapter_pack") {
-      const idx = optNpcIdx !== undefined ? optNpcIdx : npcIdx;
-      const list = A(det.payload.cenas_pack || det.payload.dias);
-      updGame(g => {
-        const targetNpc = g.npcs[idx];
-        if (!targetNpc) return;
-        list.forEach(item => {
-          if (!item?.id) return;
-          if (!g.config.cenas.some(c => c.id === item.id)) {
-            g.config.cenas.push({ id: item.id, rotulo: item.rotulo || item.id, grupo: item.grupo || "", aberturas: false, matriz: false, veredito: false });
-          }
-          const scCfg = g.config.cenas.find(c => c.id === item.id);
-          const normT = normTree(item.arvore?.nos || item.nos, [N("Entrada", "Abertura", "", [])], true, !!(g.config.modulos.aberturas_dinamicas && scCfg?.aberturas), g.config);
-          targetNpc.cenas[item.id] = { nos: normT.nos, matriz: A(item.matriz), veredito: item.veredito || null };
-        });
-        g.npc_ativo = idx;
-        if (list[0]?.id) targetNpc.aba = list[0].id;
-      });
-      flash("Pacote de capítulos importado!");
-      return;
-    }
-
-    if (det.kind === "single_tree") {
-      const destAba = mode === "tree_into_matching" && det.targetId ? det.targetId : aba;
-      updGame(g => {
-        const np = g.npcs[npcIdx];
-        if (!np) return;
-        const scCfg = g.config.cenas.find(c => c.id === destAba);
-        const exCfg = g.config.arvores_extras.find(e => e.id === destAba);
-        if (!scCfg && !exCfg) {
-          g.config.cenas.push({ id: destAba, rotulo: destAba, grupo: "", aberturas: false, matriz: false, veredito: false });
-        }
-        const isSc = !exCfg;
-        const hasAb = !!(isSc && g.config.modulos.aberturas_dinamicas && scCfg?.aberturas);
-        const normT = normTree(det.payload.nos, [N(isSc ? "Entrada" : "Raiz", "Abertura", "", [])], isSc, hasAb, g.config);
-        if (isSc) {
-          np.cenas[destAba] = { nos: normT.nos, matriz: A(det.payload.matriz), veredito: det.payload.veredito || null };
-        } else {
-          np.extras[destAba] = { nos: normT.nos };
-        }
-        np.aba = destAba;
-      });
-      flash("Árvore aplicada em " + destAba + "!");
-    }
+      g.npcs[npcIdx].aba = novoIdEx;
+    });
+    setEditingTab(true);
   };
 
   const setZ = z => setZoom(Math.min(1.5, Math.max(0.4, Math.round(z * 100) / 100)));
-  const TABS = [
-    ...cfg.cenas.map(c => [c.id, "📅 " + c.rotulo, "a"]),
-    ...cfg.arvores_extras.map(e => [e.id, e.rotulo, e.cor || "p"])
-  ];
-  const onCls = {
-    a: "border-amber-400 bg-amber-400 text-zinc-950 font-bold",
-    p: "border-purple-400 bg-purple-400 text-zinc-950 font-bold",
-    c: "border-cyan-400 bg-cyan-400 text-zinc-950 font-bold",
-    g: "border-emerald-400 bg-emerald-400 text-zinc-950 font-bold",
-    r: "border-rose-500 bg-rose-500 text-zinc-950 font-bold"
-  };
-  const offCls = {
-    a: "border-zinc-600 text-amber-400 bg-zinc-950 hover:bg-zinc-800",
-    p: "border-zinc-600 text-purple-400 bg-zinc-950 hover:bg-zinc-800",
-    c: "border-zinc-600 text-cyan-400 bg-zinc-950 hover:bg-zinc-800",
-    g: "border-zinc-600 text-emerald-400 bg-zinc-950 hover:bg-zinc-800",
-    r: "border-zinc-600 text-rose-400 bg-zinc-950 hover:bg-zinc-800"
-  };
-
   const activeNos = curSc ? data.cenas?.[curSc.id]?.nos : data.extras?.[aba]?.nos;
   const activeTitulo = curSc
-    ? "🌳 [ " + (data.npc.nome || "PERSONAGEM").toUpperCase() + " · " + (curSc.grupo ? curSc.grupo + " · " : "") + curSc.rotulo.toUpperCase() + " ]"
-    : (curEx?.rotulo || aba) + " · " + (data.npc.nome || "PERSONAGEM").toUpperCase();
-  const activeSub = curSc
-    ? ((curSc.aberturas && cfg.modulos.aberturas_dinamicas) ? "Entrada com falas por estado anterior ➔ " : "Abertura ➔ ") + "Ramos ➔ Folhas"
-    : (curEx?.sub || "Árvore especial do personagem");
+    ? (data.npc.nome || "NPC") + " · " + curSc.rotulo
+    : (curEx?.rotulo || aba) + " · " + (data.npc.nome || "NPC");
 
   return h("div", { className: "min-h-screen w-full" },
-    /* HEADER DUPLO: BARRA DE JOGO/PERSONAGENS/TEMAS + BARRA DE CENAS */
-    h("header", { className: "sticky top-0 z-50 bg-zinc-950 border-b-2 border-zinc-700" },
-      h("div", { className: "h-13 py-1 px-3 flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap border-b border-zinc-800" },
-        h("button", {
-          type: "button",
-          onClick: () => setHubOpen(true),
-          title: "Trocar de jogo, criar novo jogo ou abrir arquivo salvo anteriormente",
-          className: BTN + "border-emerald-500 text-emerald-400 bg-zinc-900 hover:bg-emerald-400 hover:text-zinc-950 font-bold shrink-0"
-        }, "📂 JOGO: " + game.game_nome),
+    /* HEADER LIMPO EM 2 BARRAS */
+    h("header", { className: "sticky top-0 z-50 dt-surface", style: { borderBottom: "1px solid var(--border-2)" } },
+      /* Barra 1: Menu, Título, NPCs (+ NPC) e Ações */
+      h("div", { className: "py-2 px-4 flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap", style: { borderBottom: "1px solid var(--border-1)" } },
+        h(Btn, {
+          tone: "z",
+          size: "sm",
+          extra: "shrink-0",
+          onClick: () => { setMenuTheme(cfg.theme || DEFAULT_THEME); setEditingTab(false); setScreen("menu"); }
+        }, h(Icon, { name: "back", size: 14 }), "Menu"),
 
-        h(Btn, { tone: "a", extra: "shrink-0", onClick: () => setCfgOpen(true), title: "Configurar cenas, módulos e regras deste jogo" }, "⚙ MÓDULOS"),
+        h("input", {
+          className: "bg-transparent border-0 font-bold fg-1 px-2 py-0.5 !w-40 shrink-0 focus:outline-none",
+          style: { borderBottom: "1px dashed var(--border-2)" },
+          value: game.game_nome,
+          title: "Nome do Projeto",
+          onChange: e => updGame(g => { g.game_nome = e.target.value; })
+        }),
 
-        h("span", { className: "text-zinc-500 text-sm uppercase shrink-0 ml-1" }, (cfg.termos.npc_plural || "NPCs") + ":"),
-        h("div", { className: "flex gap-1 flex-nowrap", role: "tablist" },
+        h("div", { className: "flex gap-1.5 flex-nowrap items-center ml-1", role: "tablist" },
           game.npcs.map((item, idx) => {
             const active = idx === npcIdx;
             const wCount = validarNpc(item, cfg).warns.length;
-            return h("button", {
-              key: idx,
-              type: "button",
-              role: "tab",
-              "aria-selected": active,
-              onClick: () => { setSel(null); updGame(g => { g.npc_ativo = idx; }); },
-              className: BTN + (active ? "border-emerald-400 bg-emerald-400 text-zinc-950 font-bold" : "border-zinc-700 text-emerald-300 bg-zinc-900 hover:bg-zinc-800")
-            }, "👤 " + (item.npc.falante || item.npc.nome || ("#" + (idx + 1))) + (wCount > 0 ? " [⚠" + wCount + "]" : ""));
+            if (active && renamingNpc) {
+              return h("input", {
+                key: idx,
+                className: "dt-input !w-36 !py-1 text-sm",
+                value: item.npc.nome,
+                autoFocus: true,
+                onBlur: () => setRenamingNpc(false),
+                onKeyDown: e => { if (e.key === "Enter" || e.key === "Escape") setRenamingNpc(false); },
+                onChange: e => updNpc(d => {
+                  d.npc.nome = e.target.value;
+                  d.npc.falante = e.target.value.split(" ")[0] || e.target.value;
+                  d.npc.id = slug(d.npc.falante) || d.npc.id;
+                })
+              });
+            }
+            return h("div", { key: idx, className: "flex items-center gap-0.5" },
+              h(Btn, {
+                tone: active ? "g" : "z",
+                size: "sm",
+                on: active,
+                onClick: () => { setSel(null); updGame(g => { g.npc_ativo = idx; }); }
+              }, (item.npc.nome || ("NPC " + (idx + 1))) + (wCount > 0 ? " (" + wCount + ")" : "")),
+              active && h(Btn, {
+                tone: "z",
+                size: "sm",
+                extra: "!px-1.5",
+                title: "Renomear este NPC",
+                onClick: () => setRenamingNpc(true)
+              }, h(Icon, { name: "edit", size: 12 }))
+            );
           }),
           h(Btn, {
             tone: "z",
-            title: "Adicionar novo personagem a este jogo",
+            size: "sm",
             onClick: () => {
               setSel(null);
               updGame(g => {
@@ -3044,73 +3694,159 @@ function App({ initialBoot }) {
                 g.npc_ativo = g.npcs.length - 1;
               });
             }
-          }, "+ " + (cfg.termos.npc_singular || "NPC").toUpperCase())
+          }, h(Icon, { name: "plus", size: 13 }), "NPC")
         ),
 
-        /* Seletor de Tema + Simulador + Exportar */
-        h("div", { className: "flex items-center gap-1.5 ml-auto flex-nowrap shrink-0" },
+        h("div", { className: "flex items-center gap-2 ml-auto flex-nowrap shrink-0" },
           h("select", {
-            className: inpCls + " !w-48 text-sm !py-0.5",
-            value: cfg.theme || "turing_crt",
-            "aria-label": "Tema visual",
-            title: "Escolher tema visual inspirador",
-            onChange: e => updGame(g => { g.config.theme = e.target.value; })
+            className: "dt-input !w-48 !py-1 text-sm",
+            value: cfg.theme || DEFAULT_THEME,
+            title: "Tema Visual",
+            onChange: e => { const th = e.target.value; setMenuTheme(th); updGame(g => { g.config.theme = th; }); }
           }, THEMES.map(t => h("option", { key: t.id, value: t.id }, t.label))),
-          h(Btn, { tone: "c", onClick: () => setSimOpen(true), title: "Simular conversa desta árvore" }, "▶ SIMULAR"),
-          h("span", { role: "status", className: "mx-1 text-sm " + (saved.ok ? "text-emerald-400" : "text-rose-500") }, saved.ok ? "● " + saved.at : "● SEM STORAGE"),
-          h(Btn, { tone: "g", onClick: () => setDataOpen(true) }, "💾 SALVAR / ABRIR")
+          h(Btn, { tone: "z", size: "sm", onClick: () => setCfgOpen(true) }, h(Icon, { name: "sliders", size: 14 }), "Opções"),
+          h(Btn, { tone: "c", size: "sm", onClick: () => setSimOpen(true) }, h(Icon, { name: "play", size: 12 }), "Testar"),
+          h("input", {
+            ref: headerFileRef,
+            type: "file",
+            accept: ".json,application/json",
+            className: "hidden",
+            onChange: ev => {
+              const f = ev.target.files?.[0];
+              if (!f) return;
+              const r = new FileReader();
+              r.onload = () => {
+                try { loadJsonIntoApp(String(r.result || ""), true); }
+                catch (err) { flash("Erro no JSON: " + (err?.message || "inválido")); }
+              };
+              r.readAsText(f, "utf-8");
+              ev.target.value = "";
+            }
+          }),
+          h(Btn, { tone: "a", size: "sm", onClick: () => headerFileRef.current && headerFileRef.current.click() }, h(Icon, { name: "folder", size: 14 }), "Abrir"),
+          h(Btn, { tone: "g", size: "sm", onClick: () => setSaveOpen(true) }, h(Icon, { name: "download", size: 14 }), "Salvar")
         )
       ),
 
-      /* Barra 2: Cenas / Dias + Árvores Especiais + Zoom */
-      h("div", { className: "h-12 px-3 flex flex-nowrap items-center gap-2 overflow-x-auto whitespace-nowrap" },
-        h("nav", { className: "flex gap-1 flex-nowrap", role: "tablist" },
-          TABS.map(([k, nome, t]) =>
-            h("button", {
-              key: k,
-              type: "button",
-              role: "tab",
-              "aria-selected": aba === k,
-              onClick: () => { setSel(null); updNpc(d => { d.aba = k; }); },
-              className: BTN + (aba === k ? (onCls[t] || onCls.a) : (offCls[t] || offCls.a))
-            }, "[ " + nome + " ]")
-          )
+      /* Barra 2: Etapas/Dias (+ Dia/Papo) | Abas Especiais (+ Aba Especial) + Ícone de Lápis */
+      h("div", { className: "py-2 px-4 flex flex-nowrap items-center gap-1.5 overflow-x-auto whitespace-nowrap" },
+        h("div", { className: "flex gap-1.5 items-center flex-nowrap" },
+          cfg.cenas.map(c => {
+            const isAct = aba === c.id;
+            return h("div", { key: c.id, className: "flex items-center gap-0.5" },
+              h(Btn, {
+                tone: isAct ? "a" : "z",
+                size: "sm",
+                on: isAct,
+                onClick: () => { setSel(null); updNpc(d => { d.aba = c.id; }); }
+              }, c.rotulo),
+              isAct && h(Btn, {
+                tone: editingTab ? "a" : "z",
+                size: "sm",
+                on: editingTab,
+                extra: "!px-1.5",
+                title: "Editar ou deletar esta etapa",
+                onClick: () => setEditingTab(!editingTab)
+              }, h(Icon, { name: "edit", size: 12 }))
+            );
+          }),
+          h(Btn, { tone: "z", size: "sm", onClick: adicionarNovaEtapa }, h(Icon, { name: "plus", size: 13 }), "Dia / Papo")
         ),
-        h("div", { className: "flex items-center gap-1 ml-auto flex-nowrap shrink-0" },
-          h(Btn, { tone: "z", onClick: () => setZ(zoom - 0.1), title: "Diminuir zoom" }, "[ − ]"),
-          h("button", { type: "button", className: btnCls("z"), onClick: () => setZ(1) }, "[ " + Math.round(zoom * 100) + "% ]"),
-          h(Btn, { tone: "z", onClick: () => setZ(zoom + 0.1), title: "Aumentar zoom" }, "[ + ]")
+
+        h("span", { className: "fg-3 mx-1.5" }, "|"),
+
+        h("div", { className: "flex gap-1.5 items-center flex-nowrap" },
+          cfg.arvores_extras.map(ex => {
+            const isAct = aba === ex.id;
+            const tn = ex.cor || "p";
+            return h("div", { key: ex.id, className: "flex items-center gap-0.5" },
+              h(Btn, {
+                tone: isAct ? tn : "z",
+                size: "sm",
+                on: isAct,
+                onClick: () => { setSel(null); updNpc(d => { d.aba = ex.id; }); }
+              }, ex.rotulo),
+              isAct && h(Btn, {
+                tone: editingTab ? tn : "z",
+                size: "sm",
+                on: editingTab,
+                extra: "!px-1.5",
+                title: "Editar, renomear ou deletar esta aba especial",
+                onClick: () => setEditingTab(!editingTab)
+              }, h(Icon, { name: "edit", size: 12 }))
+            );
+          }),
+          h(Btn, { tone: "p", size: "sm", onClick: adicionarNovaAbaEspecial }, h(Icon, { name: "plus", size: 13 }), "Aba Especial")
+        ),
+
+        h("div", { className: "flex items-center gap-1.5 ml-auto flex-nowrap shrink-0" },
+          h("span", { role: "status", className: "mx-2 text-xs " + (saved.ok ? "fg-3" : "fg-danger") }, saved.ok ? "Salvo " + saved.at : "Sem storage"),
+          h(Btn, { tone: "z", size: "sm", onClick: () => setZ(zoom - 0.1) }, h(Icon, { name: "minus", size: 12 })),
+          h(Btn, { tone: "z", size: "sm", onClick: () => setZ(1) }, Math.round(zoom * 100) + "%"),
+          h(Btn, { tone: "z", size: "sm", onClick: () => setZ(zoom + 0.1) }, h(Icon, { name: "plus", size: 12 }))
         )
-      )
+      ),
+
+      editingTab && h(TabInlineEditor, {
+        game,
+        aba,
+        updGame,
+        onClose: () => setEditingTab(false),
+        onSelectAba: nextId => updNpc(d => { d.aba = nextId; }),
+        flash
+      })
     ),
 
-    /* FLUXOGRAMA */
+    /* QUADRO DA ÁRVORE */
     h(TreeArea, {
       key: game.game_id + "|" + npcIdx + "|" + aba,
       aba,
       lineTone: curEx ? (curEx.cor || "p") : "g",
-      npcId: data.npc.id,
       titulo: activeTitulo,
-      sub: activeSub,
+      sub: curEx ? curEx.sub : "",
       nos: activeNos,
       evs,
       cfg,
       zoom,
+      setZ,
       sel,
       setSel,
       updNodeIn,
       updTreeIn,
-      onJumpNode: nid => focusNodeDom(aba, nid)
+      onJumpNode: nid => focusNodeDom(aba, nid),
+      onOpenEndingsModal: () => setEndingsOpen(true)
     }),
 
-    /* PAINEL INFERIOR DO PERSONAGEM E DO JOGO */
-    h("section", { className: "p-4 border-t-2 border-zinc-700 bg-zinc-950", "aria-label": "Painel de apoio" },
-      h("div", { className: "flex flex-wrap justify-between items-center gap-2 mb-3" },
-        h("div", { className: "glow text-xl text-zinc-300" }, "▌ FICHA DE " + (cfg.termos.npc_singular || "PERSONAGEM").toUpperCase() + " · " + (data.npc?.nome || "").toUpperCase()),
+    /* PAINEL INFERIOR */
+    h("section", { className: "p-6 dt-surface", style: { borderTop: "1px solid var(--border-2)" }, "aria-label": "Detalhes e ferramentas" },
+      h(Panel, {
+        title: "Ficha do NPC · " + (data.npc?.nome || "NPC"),
+        tone: "g",
+        defaultOpen: false,
+        right: h("span", { className: "text-xs fg-3" }, "ID: " + (data.npc?.id || "npc"))
+      },
+        h("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-3 mb-3" },
+          h("div", null,
+            h(Lbl, null, "Nome do NPC"),
+            h("input", { className: "dt-input", value: data.npc?.nome || "", onChange: e => updNpc(d => { d.npc.nome = e.target.value; }) })
+          ),
+          h("div", null,
+            h(Lbl, null, "Descrição / Papel"),
+            h("input", { className: "dt-input", value: data.npc?.tipo || "", placeholder: "Ex.: Humano, Sintético, Mercador...", onChange: e => updNpc(d => { d.npc.tipo = e.target.value; }) })
+          ),
+          h("div", null,
+            h(Lbl, null, "ID de Exportação"),
+            h("input", { className: "dt-input", value: data.npc?.id || "", onChange: e => updNpc(d => { d.npc.id = slug(e.target.value) || e.target.value; }) })
+          ),
+          h("div", null,
+            h(Lbl, null, "Nome exibido nas falas"),
+            h("input", { className: "dt-input", value: data.npc?.falante || "", onChange: e => updNpc(d => { d.npc.falante = e.target.value; }) })
+          )
+        ),
         h("div", { className: "flex gap-2" },
           h(Btn, {
             tone: "c",
-            extra: "text-sm",
+            size: "sm",
             onClick: () => {
               updGame(g => {
                 const copy = clone(g.npcs[npcIdx]);
@@ -3119,13 +3855,13 @@ function App({ initialBoot }) {
                 g.npcs.push(copy);
                 g.npc_ativo = g.npcs.length - 1;
               });
-              flash("Personagem duplicado!");
+              flash("NPC duplicado.");
             }
-          }, "DUPLICAR " + (cfg.termos.npc_singular || "NPC").toUpperCase()),
+          }, "Duplicar NPC"),
           game.npcs.length > 1 && h(ConfirmBtn, {
             tone: "r",
-            extra: "text-sm",
-            ask: "REMOVER DESTE JOGO?",
+            size: "sm",
+            ask: "Remover este NPC?",
             onConfirm: () => {
               setSel(null);
               updGame(g => {
@@ -3133,30 +3869,17 @@ function App({ initialBoot }) {
                 g.npc_ativo = Math.max(0, npcIdx - 1);
               });
             }
-          }, "REMOVER " + (cfg.termos.npc_singular || "NPC").toUpperCase())
-        )
-      ),
-      h("div", { className: "grid grid-cols-1 md:grid-cols-4 gap-2 mb-4" },
-        h("div", null,
-          h(Lbl, { cls: "!mt-0" }, "Nome Completo (editável)"),
-          h("input", { className: inpCls, value: data.npc?.nome || "", onChange: e => updNpc(d => { d.npc.nome = e.target.value; }) })
-        ),
-        h("div", null,
-          h(Lbl, { cls: "!mt-0" }, "Papel / Subtítulo"),
-          h("input", { className: inpCls, value: data.npc?.tipo || "", onChange: e => updNpc(d => { d.npc.tipo = e.target.value; }) })
-        ),
-        h("div", null,
-          h(Lbl, { cls: "!mt-0" }, "ID Interno / Arquivo"),
-          h("input", { className: inpCls, value: data.npc?.id || "", onChange: e => updNpc(d => { d.npc.id = slug(e.target.value) || e.target.value; }) })
-        ),
-        h("div", null,
-          h(Lbl, { cls: "!mt-0" }, "Nome exibido nas falas"),
-          h("input", { className: inpCls, value: data.npc?.falante || "", onChange: e => updNpc(d => { d.npc.falante = e.target.value; }) })
+          }, h(Icon, { name: "trash", size: 13 }), "Remover NPC")
         )
       ),
 
       h(Validacao, { data, cfg, onJump: jumpTo }),
-      cfg.modulos.inventario && h(Inventario, { data, cfg, updNpc }),
+      cfg.modulos.inventario && h(Inventario, {
+        data,
+        cfg,
+        updNpc,
+        onDisableModule: () => updGame(g => { g.config.modulos.inventario = false; })
+      }),
       cfg.modulos.metrica_global && h(MetricaGlobal, { game, updGame, onJumpNpc: jumpNpcNode }),
 
       curSc && curSc.matriz && cfg.modulos.matriz_transicao && h(Matriz, {
@@ -3172,71 +3895,23 @@ function App({ initialBoot }) {
         updCena
       }),
 
-      /* Legenda dinâmica */
-      h("div", { className: "flex flex-wrap gap-4 mt-2 text-sm text-zinc-400" },
-        cfg.estados_folha.map(est => {
-          const tn = TONE_MAP[est.cor] || TONE_MAP.a;
-          return h("span", { key: est.nome, className: tn.t }, "■ Folha: " + est.nome);
-        }),
-        cfg.modulos.inventario && h("span", { className: "text-cyan-400" }, "┄ 🔍 Condicional (REQ)"),
-        cfg.modulos.experimental && h("span", { className: "text-amber-300" }, "🧪 Experimental")
+      h("div", { className: "flex flex-wrap gap-4 items-center mt-3 text-xs fg-2" },
+        cfg.estados_folha.length > 0
+          ? cfg.estados_folha.map(est => {
+              const tn = TONE_MAP[est.cor] || TONE_MAP.a;
+              return h("span", { key: est.nome, className: "font-semibold " + tn.textCls }, "Final: " + est.nome);
+            })
+          : h("span", { className: "fg-pri font-semibold" }, "Fim Simples"),
+        h(Btn, { tone: "z", size: "sm", onClick: () => setEndingsOpen(true) }, h(Icon, { name: "edit", size: 12 }), "Editar Finais")
       )
     ),
 
-    hubOpen && h(GamesHubModal, {
-      reg,
-      activeGame: game,
-      onSwitchGame: switchGame,
-      onCreateGame: createGame,
-      onDeleteGame: deleteGame,
-      onApplyDetected: applyDetectedFile,
-      onResetOfficialTuring: () => {
-        lsDel(K_GAME_PREFIX + TURING_OFFICIAL_ID);
-        lsDel(K_GOOD_PREFIX + TURING_OFFICIAL_ID);
-        setSel(null);
-        setGame(buildOfficialTuringGame());
-        flash("Turing Test restaurado aos presets originais!");
-      },
-      onClose: () => setHubOpen(false),
-      flash
-    }),
+    cfgOpen && h(ConfigModal, { game, updGame, onOpenEndings: () => setEndingsOpen(true), onClose: () => setCfgOpen(false) }),
+    endingsOpen && h(EndingsEditModal, { game, updGame, onClose: () => setEndingsOpen(false) }),
+    saveOpen && h(SaveExportModal, { game, activeNpc: data, aba, onClose: () => setSaveOpen(false), flash }),
+    simOpen && h(SimModal, { game, npc: data, aba, onClose: () => setSimOpen(false) }),
 
-    cfgOpen && h(ConfigModal, {
-      game,
-      updGame,
-      onClose: () => setCfgOpen(false)
-    }),
-
-    dataOpen && h(DataModal, {
-      game,
-      activeNpc: data,
-      aba,
-      onClose: () => setDataOpen(false),
-      onOpenSmartFile: det => {
-        // Se for de outro jogo ou precisar de decisão, abre o Hub já com o arquivo inspecionado; se for direto compatível, aplica!
-        if (det.kind === "game") applyDetectedFile(det, "open_game");
-        else if (det.kind === "single_tree") applyDetectedFile(det, "tree_into_matching");
-        else if (det.kind === "chapter_pack") applyDetectedFile(det, "pack_into_npc", npcIdx);
-        else if (det.kind === "npc") {
-          if (det.isTuringNpc && game.game_id !== TURING_OFFICIAL_ID && cfg.template !== "turing_test") {
-            applyDetectedFile(det, "npc_into_turing");
-          } else {
-            applyDetectedFile(det, "npc_into_current");
-          }
-        }
-      },
-      flash
-    }),
-
-    simOpen && h(SimModal, {
-      game,
-      npc: data,
-      aba,
-      setPlayerName: nv => updGame(g => { g.nome_jogador = nv; }),
-      onClose: () => setSimOpen(false)
-    }),
-
-    toast && h("div", { className: "fixed right-4 bottom-4 z-50 bg-emerald-400 text-zinc-950 border-2 border-emerald-500 px-3 py-1 font-bold dt-card-shadow", role: "status" }, toast)
+    toast && h("div", { className: "fixed right-5 bottom-5 z-50 dt-card px-4 py-2.5 font-semibold fg-pri", style: { borderColor: "var(--pri)" }, role: "status" }, toast)
   );
 }
 
@@ -3246,48 +3921,27 @@ function App({ initialBoot }) {
 class ErrorBoundary extends React.Component {
   constructor(p) {
     super(p);
-    this.state = { err: null, info: "", json: "", msg: "" };
+    this.state = { err: null, info: "" };
   }
   static getDerivedStateFromError(err) { return { err }; }
   componentDidCatch(err, info) {
     try { console.error(err, info); } catch (e) {}
     this.setState({ info: S(info && info.componentStack).split("\n").slice(0, 8).join("\n") });
   }
-  currentJson() {
-    try {
-      const st = window.__turingPending || window.__turingState;
-      if (st) return JSON.stringify(st, null, 2);
-    } catch (e) {}
-    return "";
-  }
   render() {
     if (!this.state.err) return this.props.children;
     const e = this.state.err;
-    const copy = async () => {
-      const j = this.currentJson();
-      try { await navigator.clipboard.writeText(j); this.setState({ msg: "BACKUP COPIADO.", json: "" }); }
-      catch (x) { this.setState({ msg: "Copie manualmente o JSON abaixo:", json: j }); }
-    };
-    return h("div", { className: "max-w-3xl mx-auto mt-10 p-4 border-2 border-rose-500 bg-zinc-950" },
-      h("h1", { className: "text-3xl text-rose-500 glow" }, "!! ERRO DE RENDERIZAÇÃO !!"),
-      h("pre", { className: "border-2 border-zinc-700 p-2 my-2 overflow-auto max-h-48 whitespace-pre-wrap text-amber-300" }, S(e && e.message ? e.message : e) + (this.state.info ? "\n" + this.state.info : "")),
-      h("div", { className: "flex flex-wrap gap-2 my-3" },
-        h(Btn, { tone: "g", onClick: copy }, "COPIAR BACKUP JSON ATUAL"),
-        h(Btn, { tone: "c", onClick: () => this.props.onRestore(bootInitialSystem()) }, "RECARREGAR PROJETO")
-      ),
-      this.state.msg && h("p", { className: "text-amber-400" }, "> " + this.state.msg),
-      this.state.json && h("textarea", { readOnly: true, value: this.state.json, className: "w-full h-40 bg-zinc-950 border-2 border-zinc-700 text-emerald-300 p-2" })
+    return h("div", { className: "max-w-3xl mx-auto mt-10 p-6 dt-card" },
+      h("h1", { className: "text-2xl font-bold fg-danger m-0" }, "Erro de Renderização"),
+      h("pre", { className: "dt-input my-3 overflow-auto max-h-48 whitespace-pre-wrap text-xs" }, S(e && e.message ? e.message : e) + (this.state.info ? "\n" + this.state.info : "")),
+      h(Btn, { tone: "c", onClick: () => this.props.onRestore() }, "Voltar ao Menu")
     );
   }
 }
 
 function Root() {
-  const [boot, setBoot] = useState(() => ({ sys: bootInitialSystem(), epoch: 0 }));
-  return h(
-    ErrorBoundary,
-    { key: boot.epoch, onRestore: sys => setBoot(b => ({ sys, epoch: b.epoch + 1 })) },
-    h(App, { initialBoot: boot.sys })
-  );
+  const [epoch, setEpoch] = useState(0);
+  return h(ErrorBoundary, { key: epoch, onRestore: () => setEpoch(e => e + 1) }, h(App));
 }
 
 ReactDOM.createRoot(document.getElementById("root")).render(h(Root));

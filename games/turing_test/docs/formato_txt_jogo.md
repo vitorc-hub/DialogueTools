@@ -83,3 +83,8 @@ GANHA_INF: EV-06
 | `GANHA_EV: <EV-xx>` | Qualquer nó | Concede evidência (objeto) ao visitar o nó. |
 | `GANHA_INF: <id>` | Qualquer nó | Concede informação adquirida em conversa ao visitar o nó. |
 | `DESCONFIANCA: +<N>` | Qualquer nó | Soma `N` à variável global oculta de autodesconfiança do protagonista. |
+| `TYPE: IF` | Nó Desviador IF | Declara que este nó não tem fala própria e avalia `IF:` / `ELSE:` automaticamente. |
+| `IF: <expr> -> <id>` | Nó Desviador IF | Se `<expr>` (ex.: `NPC_NATUREZA == Sintético`, `VISAO == Confiança`, `HAS_ITEM EV-01`, `DESCONFIANCA >= 3`) for verdadeira, desvia para `<id>`. |
+| `ELSE: -> <id>` | Nó Desviador IF | Caso `IF:` seja falso, desvia para `<id>`. |
+| `TEXT_IF: [<expr>] <fala>` | Nó de fala | Substitui `TEXT:` caso `<expr>` seja verdadeira ao entrar no nó. |
+| `CHOICE_IF: <expr>` | Logo após `CHOICE:` | Exibe a última `CHOICE:` somente se `<expr>` for verdadeira. |

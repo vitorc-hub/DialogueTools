@@ -1,20 +1,22 @@
 <!DOCTYPE html>
-<html lang="pt-BR" data-theme="turing_crt">
+<html lang="pt-BR" data-theme="cozy_grove">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>DialogueTools · Editor Visual de Diálogos</title>
+  <title>Dialogue Tool</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
   <link rel="stylesheet" href="../vendor/vt323.css">
   <script src="../vendor/tailwind-3.4.17.min.js"></script>
-  <script>tailwind.config = { theme: { extend: { fontFamily: { mono: ["VT323", "ui-monospace", "monospace"] } } } };</script>
+  <script>tailwind.config = { theme: { extend: { fontFamily: { sans: ["Plus Jakarta Sans", "Inter", "system-ui", "sans-serif"], mono: ["JetBrains Mono", "VT323", "ui-monospace", "monospace"] } } } };</script>
   <script src="../vendor/react.production.min.js"></script>
   <script src="../vendor/react-dom.production.min.js"></script>
 </head>
-<body class="crt">
+<body>
   <link rel="stylesheet" href="./themes.css">
   <link rel="stylesheet" href="./styles.css">
   <div id="root"></div>
-  <script src="./presets.js"></script>
   <script src="./editor.js"></script>
 </body>
 </html>

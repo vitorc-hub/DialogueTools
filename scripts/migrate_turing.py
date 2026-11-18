@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Migra e higieniza os 3 JSONs originais (Arthur, Maria, Ana Lúcia) para o schema v7,
-gera data/json/*.json, data/txt/*.txt e src/presets.js."""
+gera games/turing_test/json/*.json, games/turing_test/turing_test_completo.json e games/turing_test/txt/*.txt."""
 
 import json
 import re
@@ -8,9 +8,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LEG_JSON = ROOT / "games/turing_test/legacy/json"
-OUT_JSON = ROOT / "games/turing_test/json"
-OUT_TXT = ROOT / "games/turing_test/txt"
-PRESETS_JS = ROOT / "src/presets.js"
+OUT_DIR = ROOT / "games/turing_test"
+OUT_JSON = OUT_DIR / "json"
+OUT_TXT = OUT_DIR / "txt"
+OUT_GLOBAL = OUT_DIR / "turing_test_completo.json"
 
 DK = ["D1", "D2", "D3", "D4", "D5", "D6"]
 VK = ["Confiança", "Dúvida", "Pressão"]
@@ -19,7 +20,6 @@ VERD = ["Humano", "Sintético", "Inconclusivo"]
 
 
 def extract_speech(raw: str) -> str:
-    """Extrai fala entre aspas simples de notas da matriz ou limpa aspas externas."""
     s = (raw or "").replace("/Nome/", "[nome]").strip()
     m = re.search(r"'([^']+)'", s)
     if m:
@@ -28,7 +28,6 @@ def extract_speech(raw: str) -> str:
 
 
 def clean_note_lines(text: str) -> str:
-    """Remove notas de revisão em segunda linha como '\\n(typo)' ou '\\n(por que -> por quê)'."""
     s = (text or "").replace("/Nome/", "[nome]")
     s = re.sub(r"\n\s*\([^)]*\)\s*$", "", s)
     return s.strip() if "\n" in text else s.replace("/Nome/", "[nome]")
@@ -37,7 +36,6 @@ def clean_note_lines(text: str) -> str:
 def clean_helena(text: str, npc_short: str) -> str:
     if not text:
         return ""
-    # Remove efeitos genéricos herdados do exemplo da Helena
     generic_helena = (
         "Falso positivo: o jogador suspeita da Helena sem motivo.",
         "Helena reage com arrogância no dia seguinte.",
@@ -85,7 +83,6 @@ def migrate_npc(raw: dict, cfg: dict) -> dict:
     falante = cfg["falante"]
     tipo = cfg["tipo"]
 
-    # 1) Inventário: evidencias (objetos) x informacoes (falas) x desconfianca
     evidencias = []
     informacoes = []
     desconf_ids = set()
@@ -139,7 +136,6 @@ def migrate_npc(raw: dict, cfg: dict) -> dict:
             if not folha:
                 for o in n.get("opcoes") or []:
                     otxt = clean_note_lines(o.get("texto") or "")
-                    # Bug 9: prefixo 'A "' na primeira opção do Arthur D1
                     if otxt.startswith('A "') and otxt.count('"') == 1:
                         otxt = otxt[3:]
                     opcoes.append(
@@ -159,18 +155,15 @@ def migrate_npc(raw: dict, cfg: dict) -> dict:
                     if req and req not in desconf_ids and dest:
                         confrontos.append({"requer": req, "no": dest})
 
-            # Corrige rótulo "Final" enganoso em nós intermediários que possuem opções
             if not folha and (opcoes or confrontos) and rotulo.lower() == "final":
                 rotulo = "Intermediário"
 
-            # Corrige nós terminais quebrados em Maria / Ana Lúcia onde folha ficou null
             dead_end_fix = cfg.get("dead_end_leaves", {}).get((f"D{day_num}" if is_day else cfg.get("_cur_tk", ""), nid))
             if dead_end_fix and not folha and not opcoes and not confrontos:
                 folha = {"visao_jogador": dead_end_fix}
                 if rotulo == "Nova bifurcação":
                     rotulo = "Final"
 
-            # Confronto recebido neste nó
             ce = n.get("confronto") or n.get("confronto_evidencia")
             legacy_ev = (n.get("ev") or "").strip()
             ev_req = ""
@@ -203,7 +196,6 @@ def migrate_npc(raw: dict, cfg: dict) -> dict:
                 "desconfianca": desconf,
             }
 
-            # Aberturas por visão herdada em Entrada de D2..D6
             if is_day and day_num > 1 and idx == 0:
                 ab_in = n.get("aberturas") if isinstance(n.get("aberturas"), dict) else {}
                 mz_map = {m.get("k"): m.get("efeito", "") for m in (prev_matriz or [])}
@@ -269,6 +261,16 @@ def migrate_npc(raw: dict, cfg: dict) -> dict:
     cfg.pop("_cur_tk", None)
 
     return {
+        "dtools_meta": {
+            "app": "DialogueTools",
+            "format_version": 2,
+            "scope": "npc",
+            "game_id": "turing_test",
+            "game_name": "Turing Test",
+            "template": "turing_test",
+            "npc_id": npc_id,
+            "npc_name": nome,
+        },
         "versao": 7,
         "npc": {"id": npc_id, "nome": nome, "falante": falante, "tipo": tipo},
         "aba": "D1",
@@ -426,12 +428,12 @@ CONFIGS = [
 def main() -> None:
     OUT_JSON.mkdir(parents=True, exist_ok=True)
     OUT_TXT.mkdir(parents=True, exist_ok=True)
-    presets = []
+    npcs = []
 
     for src_name, cfg in CONFIGS:
         raw = json.loads((LEG_JSON / src_name).read_text(encoding="utf-8"))
         migrated = migrate_npc(raw, cfg)
-        presets.append(migrated)
+        npcs.append(migrated)
 
         out_j = OUT_JSON / f"{cfg['id']}.json"
         out_j.write_text(json.dumps(migrated, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -443,14 +445,29 @@ def main() -> None:
 
         print(f"Migrado: {out_j.name} (+ 8 arquivos .txt)")
 
-    presets_content = (
-        "/* Presets oficiais gerados por scripts/migrate_data.py */\n"
-        "window.TURING_PRESETS = "
-        + json.dumps(presets, ensure_ascii=False, indent=2)
-        + ";\n"
-    )
-    PRESETS_JS.write_text(presets_content, encoding="utf-8")
-    print(f"Gerado: {PRESETS_JS} ({PRESETS_JS.stat().st_size / 1024:.1f} KB)")
+    global_doc = {
+        "dtools_meta": {
+            "app": "DialogueTools",
+            "format_version": 2,
+            "scope": "game",
+            "game_id": "turing_test",
+            "game_name": "Turing Test",
+            "template": "turing_test",
+        },
+        "versao_workspace": 2,
+        "game_id": "turing_test",
+        "game_nome": "Turing Test",
+        "npc_ativo": 0,
+        "nome_jogador": "Inspetor",
+        "metricas": npcs[0]["metricas"],
+        "npcs": npcs,
+    }
+    OUT_GLOBAL.write_text(json.dumps(global_doc, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(f"Gerado pacote global: {OUT_GLOBAL} ({OUT_GLOBAL.stat().st_size / 1024:.1f} KB)")
+
+    old_presets = ROOT / "src/presets.js"
+    if old_presets.exists():
+        old_presets.unlink()
 
 
 if __name__ == "__main__":

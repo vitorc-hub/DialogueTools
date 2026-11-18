@@ -1,14 +1,14 @@
-/* Layout utilitário e animações do DialogueTools */
+/* Layout utilitário, scrollbars suaves e animações do Dialogue Tool */
 
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-  outline: 2px solid var(--acc-3);
+  outline: 2px solid var(--pri);
   outline-offset: 1px;
 }
 
 .g5 {
   display: grid;
-  grid-template-columns: 96px 132px 1fr 1fr 28px;
-  gap: 0.5rem;
+  grid-template-columns: 104px 140px 1fr 1fr 34px;
+  gap: 0.6rem;
 }
 @media (max-width: 768px) {
   .g5 {
@@ -17,7 +17,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 }
 
 .scale-t {
-  transition: transform 0.18s ease-out;
+  transition: transform 0.14s ease-out;
 }
 @media (prefers-reduced-motion: reduce) {
   .scale-t {
@@ -25,9 +25,33 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   }
 }
 
+.canvas-pan {
+  cursor: grab;
+}
+.canvas-pan.panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
+/* Scrollbar integrada ao tema */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-canvas);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-2);
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-3);
+}
+
 @keyframes pulse-focus {
-  0%, 100% { box-shadow: 0 0 0 2px var(--acc-3), 0 0 18px var(--acc-3); }
-  50% { box-shadow: 0 0 0 4px var(--acc-2), 0 0 26px var(--acc-2); }
+  0%, 100% { box-shadow: 0 0 0 2px var(--info), 0 0 18px var(--info-soft); }
+  50% { box-shadow: 0 0 0 4px var(--sec), 0 0 26px var(--sec-soft); }
 }
 .jump-flash {
   animation: pulse-focus 0.7s ease-in-out 2;

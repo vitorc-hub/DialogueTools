@@ -1,4 +1,14 @@
 {
+  "dtools_meta": {
+    "app": "DialogueTools",
+    "format_version": 2,
+    "scope": "npc",
+    "game_id": "turing_test",
+    "game_name": "Turing Test",
+    "template": "turing_test",
+    "npc_id": "maria",
+    "npc_name": "Maria Bianca"
+  },
   "versao": 7,
   "npc": {
     "id": "maria",
