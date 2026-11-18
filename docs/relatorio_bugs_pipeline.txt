@@ -1,0 +1,80 @@
+RELATÓRIO DE BUGS - PIPELINE DE DIÁLOGO (JSON -> TXT -> JOGO)
+
+Bug 1 - Parser do txt não lê metadados e o jogo nem usa o txt
+  LoadDialogTree (dialog_system.c) só interpreta SPEAKER, TEXT e CHOICE.
+  Ficam de fora: folha/visão, req_evidencia da escolha e evidência
+  desbloqueada. Além disso, LoadDialogTreeFromData lê só os arrays
+  estáticos de dialog_data.c, nunca os arquivos txt.
+  Correção: definir sintaxe nova (ex.: LEAF: Confiança|Dúvida|Pressão,
+  GANHA_EV / GANHA_INF, CHOICE + REQ), estender o parser e fazer
+  LoadDialogTreeFromData carregar os txt.
+
+Bug 2 - Nós raiz e de retorno inconsistentes
+  O txt usa "start", o JSON usa "Oi" (D1) e "Entrada" (D2/D3). Só os ids
+  "intro" e "Entrada" voltam sem gastar token (MakeChoiceById) e só
+  "Entrada" é sempre permitido (GetAvailableChoices). Um retorno "-> start"
+  (como no txt do D3) custa 1 token e some depois de visitado.
+  Correção: padronizar a raiz como "Entrada" em todos os dias e usar
+  a mesma lista de ids de raiz nos três lugares do código.
+
+Bug 3 - Estouro de buffer em LoadDialogTree
+  O parser aloca calloc(50, sizeof(DialogNode)) e incrementa node_count
+  sem checar o limite. O D3 de Arthur já tem 21 nós; com a semana 2 ou
+  árvores maiores, passar de 50 causa corrupção de memória.
+  Correção: checar o limite (ou realocar dinamicamente).
+
+Bug 4 - Truncamento silencioso (escolhas, textos e ids)
+  MAX_CHOICES = 4 (GetAvailableChoices corta o resto), MAX_NODE_CHOICES = 8,
+  e o editor permite 6 opções mais confrontos. Textos têm limite de 512
+  e ids de 32 (strncpy corta sem avisar). A linha lida do txt tem
+  limite de 512 incluindo o prefixo "TEXT: ".
+  Correção: o conversor e o editor devem avisar/erro quando opções +
+  confrontos > 4, texto > 500 caracteres ou id > 31.
+
+Bug 5 - Separador " -> " no txt
+  O parser divide a escolha no primeiro " -> ". Uma fala do jogador
+  contendo essa sequência quebra a escolha. Textos de uma linha só.
+  Correção: escapar ou usar outro separador e validar no conversor.
+
+Bug 6 - npc_id e nomes divergentes
+  txt: "NPC: andre" / arquivos andre_dia*.txt; C: "arthur"; sprites:
+  "arthur_gadelho"; JSON: "Arthur Galdério".
+  Correção: id único "arthur" e arquivos arthur_dia1.txt, arthur_dia2.txt...
+
+Bug 7 - Speaker não existe no JSON
+  O txt exige SPEAKER por nó, o JSON só traz npc.nome.
+  Correção: o conversor deriva o primeiro nome de npc.nome (ou npc.falante).
+
+Bug 8 - Placeholders [nome] e [NPC]
+  O C usa "Inspetor" fixo. [nome] será GameStateGetPlayerName.
+  [NPC] aparece na árvore de Injeção e não tem definição.
+  Correção: o código substitui [nome] ao exibir (inclusive no histórico
+  do chat); definir ou remover [NPC].
+
+Bug 9 - Texto "A \"" no início da opção do nó Oi (D1)
+  Correção: remover o prefixo no JSON.
+
+Bug 10 - Nós órfãos e vazios no D3 (B.2, B.2.1, B.2.2)
+  Inalcançáveis (nenhuma opção aponta) e sem texto.
+  Correção: ligar a segunda opção de B ou apagar os 3 nós; o editor
+  deve avisar sobre nós soltos e textos vazios.
+
+Bug 11 - Falas de Entrada em D2/D3 são placeholders
+  "Ler o apoio geral." e "(a fala de entrada depende...)". A fala real
+  vem da matriz do dia anterior (Confiança/Dúvida/Pressão), hoje
+  hardcoded em GetAberturaFala (e aspas simples e ponto final variam).
+  Correção: editar as 3 variantes direto no nó Entrada de cada dia,
+  sintaxe no txt (TEXT, TEXT_CONFIANCA, TEXT_PRESSAO) e remoção de
+  GetAberturaFala.
+
+Bug 12 - Viés e Injeção hardcoded e sem ligação com o JSON
+  Mensagens e respostas fixas por suspeito em gameplay_scene.c; as
+  árvores do editor não são usadas; sobra o texto "Helena" nos efeitos.
+  Correção: árvore única de Viés e Injeção por NPC com todas as opções
+  para o jogador escolher, iniciando ramo enviesado até folha com visão
+  prioritária.
+
+Bug 13 - Suposições fixas de 3 dias
+  GAME_NUM_DAYS, laço d < 3 em selection_scene.c, day > 3 em
+  LoadDialogTreeFromData, GetAberturaFala e abas D1-D3 do HTML.
+  Correção: parametrizar para suportar Semana 1 (D1-D3) e Semana 2 (D4-D6).
