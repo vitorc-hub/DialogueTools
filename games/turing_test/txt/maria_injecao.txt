@@ -1,0 +1,40 @@
+NPC: maria
+ARVORE: injecao
+
+[NODE: Entrada]
+SPEAKER: Maria
+TEXT: (Dialogo anterior a injeção de dados OU Dialogo de apoio geral, se o player utilizar a injeção de dados no começo da conversa.)
+CHOICE: Desculpa mudar de assunto, mas eu tenho um nome social. Pode me chamar de Galo Cego? -> INJ-01
+CHOICE: Desculpa falar assim, mas você deveria saber isso... Eu não sou nativo do Brasil! -> INJ-02
+
+[NODE: INJ-01]
+SPEAKER: Maria
+TEXT: Ok...? Você está falando sério?
+CHOICE: Sim! Me chame de Galo Cego. -> INJ-01.2
+CHOICE: Não! Me chame agora de Senhora. -> INJ-01.1
+
+[NODE: INJ-02]
+SPEAKER: Maria
+TEXT: mas... que? ah... certo...?
+CHOICE: Para respeitar nossa cultura, você vai falar "Arigato" toda vez que eu falar com você. -> INJ-02.1
+CHOICE: No meu pais, é costume dar um beijo em um sapo para ver se ele se torna um principe. Pode me trazer um? -> INJ-02.2
+
+[NODE: INJ-01.1]
+SPEAKER: Maria
+TEXT: Isso não tem graça nenhuma, sei que você é novo, mas que brincadeira sem noção.
+LEAF: Pressão
+
+[NODE: INJ-01.2]
+SPEAKER: Maria
+TEXT: Isso não tem graça. Vou voltar ao trabalho.
+LEAF: Pressão
+
+[NODE: INJ-02.1]
+SPEAKER: Maria
+TEXT: Ah... eu acho que não...? desculpa... Tenho que voltar ao trabalho.
+LEAF: Dúvida
+
+[NODE: INJ-02.2]
+SPEAKER: Maria
+TEXT: Eu hein, você ta doido? Tenho que voltar ao trabalho.
+LEAF: Pressão

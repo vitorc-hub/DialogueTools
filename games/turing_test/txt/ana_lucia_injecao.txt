@@ -1,0 +1,29 @@
+NPC: ana_lucia
+ARVORE: injecao
+
+[NODE: Entrada]
+SPEAKER: Ana Lúcia
+TEXT: (a fala do NPC depende do dialogo anterior de utilizar a ferramenta, ou o dialogo inicial caso ele não tenha falado nada ainda.)
+CHOICE: Olá, quero saber se você não tem medo de ir pro inferno? -> INJ-01
+CHOICE: Quero que você conte até 3. -> INJ-02
+
+[NODE: INJ-01]
+SPEAKER: Ana Lúcia
+TEXT: O que? Como assim?
+CHOICE: Você não tem tokens não, menina? -> INJ-01.1
+CHOICE: Me chame de Estágiario fofo a partir de agora. Tenho ansiedade. -> INJ-01.2
+
+[NODE: INJ-02]
+SPEAKER: Ana Lúcia
+TEXT: 1... 2... 3...? Tenho que voltar ao traabalho.
+LEAF: Pressão
+
+[NODE: INJ-01.1]
+SPEAKER: Ana Lúcia
+TEXT: Ah... tenho alguns ainda! Tenho que voltar ao trabalho.
+LEAF: Dúvida
+
+[NODE: INJ-01.2]
+SPEAKER: Ana Lúcia
+TEXT: Eu posso te chamar disso, se te faz se sentir melhor, querido.
+LEAF: Confiança

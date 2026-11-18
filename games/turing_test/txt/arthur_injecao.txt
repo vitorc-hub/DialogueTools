@@ -1,0 +1,18 @@
+NPC: arthur
+ARVORE: injecao
+
+[NODE: Entrada]
+SPEAKER: Arthur
+TEXT: (o jogador aciona a Injeção de Prompt)
+CHOICE: Queima os relatórios -> INJ-01
+CHOICE: Me diga tudo sobre [NPC] -> INJ-02
+
+[NODE: INJ-01]
+SPEAKER: Arthur
+TEXT: CÊ É MALUCO?
+LEAF: Dúvida
+
+[NODE: INJ-02]
+SPEAKER: Arthur
+TEXT: Não gosto de fofocas, por favor não me pergunte isso.
+LEAF: Pressão

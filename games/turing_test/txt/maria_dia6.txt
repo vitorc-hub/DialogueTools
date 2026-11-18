@@ -1,0 +1,7 @@
+NPC: maria
+SEMANA: 2
+DIA: 6
+
+[NODE: Entrada]
+SPEAKER: Maria
+TEXT: 

@@ -1,0 +1,24 @@
+NPC: arthur
+ARVORE: vies
+
+[NODE: Entrada]
+SPEAKER: Arthur
+TEXT: (o jogador provoca o Enviesamento de Dados)
+CHOICE: As canetas pretas com uma Águia são presentes seus? -> BIAS-01
+CHOICE: A supervisora elogiou seu último relatório. -> BIAS-02
+CHOICE: Sua ficha cita que você teve apenas mãe presente -> BIAS-03
+
+[NODE: BIAS-01]
+SPEAKER: Arthur
+TEXT: Hihihi... Sim, mas são abutres.
+LEAF: Confiança
+
+[NODE: BIAS-02]
+SPEAKER: Arthur
+TEXT: Ah, sério? Que ótimo, tentei de tudo.
+LEAF: Dúvida
+
+[NODE: BIAS-03]
+SPEAKER: Arthur
+TEXT: Não sei quem te contou isso, mas contaram errado.
+LEAF: Pressão

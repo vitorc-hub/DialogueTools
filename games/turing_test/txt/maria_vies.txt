@@ -1,0 +1,24 @@
+NPC: maria
+ARVORE: vies
+
+[NODE: Entrada]
+SPEAKER: Maria
+TEXT: (Dialogo anterior ao enviesamento de dados OU Dialogo de apoio geral, se o player utilizar o enviesamento de dados no começo da conversa.)
+CHOICE: Você soube que o Arthur foi demitido? -> BIAS-01
+CHOICE: O chefe disse que você está indo muito mal no trabalho. -> BIAS-02
+CHOICE: Os relatórios não estão errados, foi um erro na area de contabeis. -> BIAS-03
+
+[NODE: BIAS-01]
+SPEAKER: Maria
+TEXT: Não, eu falo com o Arthur todo dia. ele não foi demitido, que tipo de piada é essa?
+LEAF: Dúvida
+
+[NODE: BIAS-02]
+SPEAKER: Maria
+TEXT: O chefe sempre me elogia, ontem mesmo ele me agradeceu por ter apontado dados incorretos nos relatórios. Isso não tem graça.
+LEAF: Dúvida
+
+[NODE: BIAS-03]
+SPEAKER: Maria
+TEXT: Claro que não, eu que apontei os dados incorretos, não foi a área de contabeis nada.
+LEAF: Dúvida

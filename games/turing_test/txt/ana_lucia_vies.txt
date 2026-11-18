@@ -1,0 +1,24 @@
+NPC: ana_lucia
+ARVORE: vies
+
+[NODE: Entrada]
+SPEAKER: Ana Lúcia
+TEXT: (O jogador utiliza a ferramenta, mas a fala dela é a ultima fala que ela disse, ou a fala inicial do dia, caso ele utilize o viés desde o começo da conversa sem nenhum outro dialogo.)
+CHOICE: A Maria disse que vocẽ trabahla aqui faz 6 anos. -> BIAS-01
+CHOICE: O Setor de cibersegurança disse que você nunca sai do setor administrativo. -> BIAS-02
+CHOICE: O Arthur disse que você sempre ajuda ele porque ele não gosta de ajudar os outros. -> Raiz.1
+
+[NODE: BIAS-01]
+SPEAKER: Ana Lúcia
+TEXT: Sim, sim. faz 6 anos que trabalho aqui. Estou ocupada agora, tchau querido.
+LEAF: Confiança
+
+[NODE: BIAS-02]
+SPEAKER: Ana Lúcia
+TEXT: Eu... é claro... não estou entendendo. Por que eu estaria em qualquer outro setor? Tenho que voltar ao trabalho...
+LEAF: Dúvida
+
+[NODE: Raiz.1]
+SPEAKER: Ana Lúcia
+TEXT: Eu... Não sei por que ele falaria isso. Mas eu suponho que sim, é minha função afinal. tenho que voltar ao trabalho.
+LEAF: Pressão

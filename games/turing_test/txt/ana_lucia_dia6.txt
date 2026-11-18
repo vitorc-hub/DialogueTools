@@ -1,0 +1,7 @@
+NPC: ana_lucia
+SEMANA: 2
+DIA: 6
+
+[NODE: Entrada]
+SPEAKER: Ana Lúcia
+TEXT: 

@@ -1,0 +1,7 @@
+NPC: arthur
+SEMANA: 2
+DIA: 6
+
+[NODE: Entrada]
+SPEAKER: Arthur
+TEXT: 

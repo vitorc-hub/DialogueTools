@@ -1,0 +1,498 @@
+/* ==========================================================================
+   DIALOGUETOOLS · MOTOR DE TEMAS INSPIRADORES (10 ESTILOS VISUAIS)
+   ========================================================================== */
+
+/* 1. TERMINAL RASEC (CRT Clássico · Padrão TuringTest) */
+:root,
+[data-theme="turing_crt"] {
+  color-scheme: dark;
+  --font-body: 'VT323', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-size-body: 19px;
+  --line-height-body: 1.15;
+  --radius: 0px;
+  --bg-app: #09090b;
+  --bg-card: #141418;
+  --bg-hover: #22222a;
+  --fg-main: #bbf7d0;
+  --fg-soft: #a1a1aa;
+  --fg-muted: #71717a;
+  --fg-on-accent: #09090b;
+  --border-subtle: #27272a;
+  --border-main: #3f3f46;
+  --border-strong: #52525b;
+  --acc-1: #00ff87;
+  --acc-2: #fbbf24;
+  --acc-3: #22d3ee;
+  --acc-magic: #c084fc;
+  --acc-danger: #f43f5e;
+  --tint-1: rgba(2, 44, 34, 0.48);
+  --tint-2: rgba(69, 26, 3, 0.45);
+  --tint-3: rgba(8, 51, 68, 0.45);
+  --tint-danger: rgba(76, 5, 25, 0.45);
+  --line-main: rgba(0, 255, 135, 0.42);
+  --line-alt: rgba(34, 211, 238, 0.72);
+  --line-magic: rgba(192, 132, 252, 0.48);
+  --card-shadow: 4px 4px 0 0 #000000;
+  --sel-shadow: 4px 4px 0 0 #22d3ee;
+  --glow-text: 0 0 6px currentColor;
+  --canvas-bg:
+    linear-gradient(#18181b 1px, transparent 1px),
+    linear-gradient(90deg, #18181b 1px, transparent 1px);
+  --canvas-size: 32px 32px;
+  --overlay-fx: linear-gradient(rgba(255, 255, 255, 0.015) 50%, rgba(0, 0, 0, 0.06) 50%);
+  --overlay-size: 100% 4px;
+}
+
+/* 2. QUILLTREE (Manuscrito, Pergaminho & Pena · Fantasia / Narrativa Literária) */
+[data-theme="quill_tree"] {
+  color-scheme: light;
+  --font-body: Georgia, 'Palatino Linotype', 'Book Antiqua', Palatino, serif;
+  --font-size-body: 15.5px;
+  --line-height-body: 1.38;
+  --radius: 6px;
+  --bg-app: #f4ebd9;
+  --bg-card: #fbf6eb;
+  --bg-hover: #eadcc3;
+  --fg-main: #2b1d12;
+  --fg-soft: #5c4632;
+  --fg-muted: #7f6750;
+  --fg-on-accent: #fdfaf3;
+  --border-subtle: #dccbb0;
+  --border-main: #bfa582;
+  --border-strong: #8f724d;
+  --acc-1: #2b6e48;
+  --acc-2: #a86416;
+  --acc-3: #1f5f78;
+  --acc-magic: #6b3fa0;
+  --acc-danger: #9e2a2b;
+  --tint-1: rgba(43, 110, 72, 0.13);
+  --tint-2: rgba(168, 100, 22, 0.14);
+  --tint-3: rgba(31, 95, 120, 0.12);
+  --tint-danger: rgba(158, 42, 43, 0.13);
+  --line-main: rgba(110, 82, 48, 0.55);
+  --line-alt: rgba(31, 95, 120, 0.7);
+  --line-magic: rgba(107, 63, 160, 0.55);
+  --card-shadow: 2px 4px 12px rgba(62, 40, 18, 0.14);
+  --sel-shadow: 0 0 0 2px #1f5f78, 3px 6px 14px rgba(31, 95, 120, 0.25);
+  --glow-text: none;
+  --canvas-bg:
+    radial-gradient(rgba(124, 93, 56, 0.18) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(165, 133, 92, 0.09) 1px, transparent 1px);
+  --canvas-size: 24px 24px, 100% 32px;
+  --overlay-fx: radial-gradient(circle at 50% 30%, transparent 60%, rgba(120, 85, 42, 0.08) 100%);
+  --overlay-size: 100% 100%;
+}
+
+/* 3. INK B&W (Nanquim Preto & Branco · Mangá / Graphic Novel Minimalista) */
+[data-theme="ink_bw"] {
+  color-scheme: light;
+  --font-body: ui-monospace, 'Cascadia Mono', 'Fira Mono', Menlo, Consolas, monospace;
+  --font-size-body: 15px;
+  --line-height-body: 1.32;
+  --radius: 0px;
+  --bg-app: #f6f6f4;
+  --bg-card: #ffffff;
+  --bg-hover: #e7e7e4;
+  --fg-main: #0a0a0a;
+  --fg-soft: #363636;
+  --fg-muted: #666666;
+  --fg-on-accent: #ffffff;
+  --border-subtle: #d4d4d0;
+  --border-main: #1f1f1f;
+  --border-strong: #0a0a0a;
+  --acc-1: #111111;
+  --acc-2: #3f3f3f;
+  --acc-3: #1c1c1c;
+  --acc-magic: #4a4a4a;
+  --acc-danger: #000000;
+  --tint-1: rgba(0, 0, 0, 0.06);
+  --tint-2: rgba(0, 0, 0, 0.10);
+  --tint-3: rgba(0, 0, 0, 0.07);
+  --tint-danger: rgba(0, 0, 0, 0.14);
+  --line-main: rgba(10, 10, 10, 0.75);
+  --line-alt: rgba(10, 10, 10, 0.9);
+  --line-magic: rgba(60, 60, 60, 0.75);
+  --card-shadow: 5px 5px 0 0 #0a0a0a;
+  --sel-shadow: 6px 6px 0 0 #000000, inset 0 0 0 2px #000000;
+  --glow-text: none;
+  --canvas-bg: radial-gradient(#b5b5b0 1.25px, transparent 1.25px);
+  --canvas-size: 20px 20px;
+  --overlay-fx: none;
+  --overlay-size: 100% 100%;
+}
+
+/* 4. CRIMSON CRIME (Mural de Detetive & Noir Carmesim) */
+[data-theme="crimson_crime"] {
+  color-scheme: dark;
+  --font-body: 'Courier New', Courier, ui-monospace, monospace;
+  --font-size-body: 15.5px;
+  --line-height-body: 1.3;
+  --radius: 2px;
+  --bg-app: #110709;
+  --bg-card: #1b0c10;
+  --bg-hover: #2b1219;
+  --fg-main: #f5e6e8;
+  --fg-soft: #cba8ae;
+  --fg-muted: #8f656d;
+  --fg-on-accent: #140507;
+  --border-subtle: #33161d;
+  --border-main: #59202c;
+  --border-strong: #85293b;
+  --acc-1: #ff2e4c;
+  --acc-2: #f59e0b;
+  --acc-3: #fda4af;
+  --acc-magic: #c084fc;
+  --acc-danger: #fb7185;
+  --tint-1: rgba(136, 19, 55, 0.35);
+  --tint-2: rgba(120, 53, 15, 0.35);
+  --tint-3: rgba(159, 18, 57, 0.28);
+  --tint-danger: rgba(190, 18, 60, 0.42);
+  --line-main: rgba(255, 46, 76, 0.62);
+  --line-alt: rgba(253, 164, 175, 0.78);
+  --line-magic: rgba(245, 158, 11, 0.6);
+  --card-shadow: 5px 5px 0 0 #070203;
+  --sel-shadow: 0 0 14px rgba(255, 46, 76, 0.55), 4px 4px 0 0 #ff2e4c;
+  --glow-text: 0 0 8px rgba(255, 46, 76, 0.45);
+  --canvas-bg:
+    linear-gradient(rgba(136, 19, 55, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(136, 19, 55, 0.22) 1px, transparent 1px);
+  --canvas-size: 36px 36px;
+  --overlay-fx: radial-gradient(circle at 50% 40%, transparent 45%, rgba(0, 0, 0, 0.55) 100%);
+  --overlay-size: 100% 100%;
+}
+
+/* 5. SYNTHWAVE (Outrun Sunset 1986 · Neon Magenta & Ciano) */
+[data-theme="synthwave"] {
+  color-scheme: dark;
+  --font-body: 'VT323', ui-monospace, monospace;
+  --font-size-body: 19px;
+  --line-height-body: 1.16;
+  --radius: 4px;
+  --bg-app: #120428;
+  --bg-card: #1e0b3d;
+  --bg-hover: #2d1259;
+  --fg-main: #f7e8ff;
+  --fg-soft: #c8a2eb;
+  --fg-muted: #8e63b8;
+  --fg-on-accent: #120428;
+  --border-subtle: #341663;
+  --border-main: #5a249e;
+  --border-strong: #8738db;
+  --acc-1: #ff2a85;
+  --acc-2: #ffbe0b;
+  --acc-3: #00f5d4;
+  --acc-magic: #b5179e;
+  --acc-danger: #ff595e;
+  --tint-1: rgba(255, 42, 133, 0.20);
+  --tint-2: rgba(255, 190, 11, 0.18);
+  --tint-3: rgba(0, 245, 212, 0.16);
+  --tint-danger: rgba(255, 89, 94, 0.24);
+  --line-main: rgba(255, 42, 133, 0.62);
+  --line-alt: rgba(0, 245, 212, 0.78);
+  --line-magic: rgba(255, 190, 11, 0.62);
+  --card-shadow: 0 0 16px rgba(255, 42, 133, 0.22), 4px 4px 0 0 #090117;
+  --sel-shadow: 0 0 18px rgba(0, 245, 212, 0.65), 4px 4px 0 0 #00f5d4;
+  --glow-text: 0 0 10px currentColor;
+  --canvas-bg:
+    linear-gradient(rgba(255, 42, 133, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 245, 212, 0.14) 1px, transparent 1px);
+  --canvas-size: 40px 40px;
+  --overlay-fx: linear-gradient(180deg, rgba(255, 42, 133, 0.06) 0%, transparent 45%, rgba(0, 245, 212, 0.06) 100%);
+  --overlay-size: 100% 100%;
+}
+
+/* 6. CYBERPUNK (Night City · Amarelo Ácido, Ciano Implante & Asfalto) */
+[data-theme="cyberpunk"] {
+  color-scheme: dark;
+  --font-body: ui-monospace, 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+  --font-size-body: 14.5px;
+  --line-height-body: 1.3;
+  --radius: 0px;
+  --bg-app: #090b10;
+  --bg-card: #111521;
+  --bg-hover: #1b2234;
+  --fg-main: #eef6ff;
+  --fg-soft: #94a9c9;
+  --fg-muted: #5c7091;
+  --fg-on-accent: #090b10;
+  --border-subtle: #1e2638;
+  --border-main: #2e3b59;
+  --border-strong: #495e8c;
+  --acc-1: #fcee0a;
+  --acc-2: #00f0ff;
+  --acc-3: #00f0ff;
+  --acc-magic: #bd00ff;
+  --acc-danger: #ff003c;
+  --tint-1: rgba(252, 238, 10, 0.14);
+  --tint-2: rgba(0, 240, 255, 0.14);
+  --tint-3: rgba(0, 240, 255, 0.16);
+  --tint-danger: rgba(255, 0, 60, 0.24);
+  --line-main: rgba(252, 238, 10, 0.58);
+  --line-alt: rgba(0, 240, 255, 0.8);
+  --line-magic: rgba(189, 0, 255, 0.6);
+  --card-shadow: 5px 5px 0 0 #ff003c;
+  --sel-shadow: 5px 5px 0 0 #00f0ff, 0 0 14px rgba(0, 240, 255, 0.45);
+  --glow-text: 0 0 7px currentColor;
+  --canvas-bg:
+    linear-gradient(rgba(252, 238, 10, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.08) 1px, transparent 1px);
+  --canvas-size: 28px 28px;
+  --overlay-fx: repeating-linear-gradient(-45deg, transparent, transparent 14px, rgba(252, 238, 10, 0.012) 14px, rgba(252, 238, 10, 0.012) 28px);
+  --overlay-size: 100% 100%;
+}
+
+/* 7. EERIE ATMOSPHERE (Névoa, Terror Psicológico & Sinal Perdido) */
+[data-theme="eerie"] {
+  color-scheme: dark;
+  --font-body: 'Courier New', Georgia, serif;
+  --font-size-body: 15.5px;
+  --line-height-body: 1.35;
+  --radius: 2px;
+  --bg-app: #0a0e0c;
+  --bg-card: #121916;
+  --bg-hover: #1b2621;
+  --fg-main: #d8e0da;
+  --fg-soft: #96a89c;
+  --fg-muted: #617368;
+  --fg-on-accent: #090d0b;
+  --border-subtle: #1d2823;
+  --border-main: #2f4038;
+  --border-strong: #496357;
+  --acc-1: #84a98c;
+  --acc-2: #c9a26b;
+  --acc-3: #98c1d9;
+  --acc-magic: #9d8189;
+  --acc-danger: #bc4749;
+  --tint-1: rgba(132, 169, 140, 0.16);
+  --tint-2: rgba(201, 162, 107, 0.16);
+  --tint-3: rgba(152, 193, 217, 0.15);
+  --tint-danger: rgba(188, 71, 73, 0.24);
+  --line-main: rgba(132, 169, 140, 0.42);
+  --line-alt: rgba(152, 193, 217, 0.62);
+  --line-magic: rgba(157, 129, 137, 0.5);
+  --card-shadow: 0 8px 24px rgba(0, 0, 0, 0.65);
+  --sel-shadow: 0 0 18px rgba(132, 169, 140, 0.45);
+  --glow-text: 0 0 9px rgba(132, 169, 140, 0.35);
+  --canvas-bg: radial-gradient(rgba(132, 169, 140, 0.12) 1px, transparent 1px);
+  --canvas-size: 30px 30px;
+  --overlay-fx: radial-gradient(circle at 50% 50%, transparent 35%, rgba(2, 5, 4, 0.68) 100%);
+  --overlay-size: 100% 100%;
+}
+
+/* 8. DUNGEON CRAWLER (Pedra, Bronze & Luz de Tocha · RPG Dark Fantasy) */
+[data-theme="dungeon"] {
+  color-scheme: dark;
+  --font-body: Georgia, 'Times New Roman', Times, serif;
+  --font-size-body: 16px;
+  --line-height-body: 1.34;
+  --radius: 3px;
+  --bg-app: #13100e;
+  --bg-card: #1f1915;
+  --bg-hover: #2d241e;
+  --fg-main: #ede0ce;
+  --fg-soft: #bba58b;
+  --fg-muted: #857059;
+  --fg-on-accent: #140f0b;
+  --border-subtle: #332921;
+  --border-main: #5c4735;
+  --border-strong: #8a6a4b;
+  --acc-1: #e09f3e;
+  --acc-2: #f4a261;
+  --acc-3: #4ea8de;
+  --acc-magic: #9d4edd;
+  --acc-danger: #d62828;
+  --tint-1: rgba(224, 159, 62, 0.18);
+  --tint-2: rgba(244, 162, 97, 0.18);
+  --tint-3: rgba(78, 168, 222, 0.16);
+  --tint-danger: rgba(214, 40, 40, 0.25);
+  --line-main: rgba(224, 159, 62, 0.52);
+  --line-alt: rgba(78, 168, 222, 0.72);
+  --line-magic: rgba(157, 78, 221, 0.58);
+  --card-shadow: 0 4px 0 0 #0a0806, 0 8px 20px rgba(0, 0, 0, 0.6);
+  --sel-shadow: 0 0 16px rgba(224, 159, 62, 0.55), 0 0 0 2px #e09f3e;
+  --glow-text: 0 0 8px rgba(224, 159, 62, 0.38);
+  --canvas-bg:
+    linear-gradient(#241d18 2px, transparent 2px),
+    linear-gradient(90deg, #241d18 2px, transparent 2px);
+  --canvas-size: 48px 48px;
+  --overlay-fx: radial-gradient(circle at 50% 20%, rgba(234, 88, 12, 0.08), transparent 65%);
+  --overlay-size: 100% 100%;
+}
+
+/* 9. SHOOT AND DASH (Arcade Run & Gun · Laranja Turbo & Azul Elétrico) */
+[data-theme="shoot_dash"] {
+  color-scheme: dark;
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  --font-size-body: 15px;
+  --line-height-body: 1.28;
+  --radius: 2px;
+  --bg-app: #081121;
+  --bg-card: #10203d;
+  --bg-hover: #19315c;
+  --fg-main: #f0f7ff;
+  --fg-soft: #9ec1eb;
+  --fg-muted: #6287b5;
+  --fg-on-accent: #081121;
+  --border-subtle: #1b335e;
+  --border-main: #2a4e8c;
+  --border-strong: #4172c4;
+  --acc-1: #ff6b00;
+  --acc-2: #ffd000;
+  --acc-3: #00bbf9;
+  --acc-magic: #f15bb5;
+  --acc-danger: #ff2a54;
+  --tint-1: rgba(255, 107, 0, 0.22);
+  --tint-2: rgba(255, 208, 0, 0.20);
+  --tint-3: rgba(0, 187, 249, 0.20);
+  --tint-danger: rgba(255, 42, 84, 0.26);
+  --line-main: rgba(255, 107, 0, 0.65);
+  --line-alt: rgba(0, 187, 249, 0.82);
+  --line-magic: rgba(241, 91, 181, 0.65);
+  --card-shadow: 6px 6px 0 0 #040914;
+  --sel-shadow: 6px 6px 0 0 #ffd000;
+  --glow-text: 0 0 6px rgba(255, 107, 0, 0.4);
+  --canvas-bg:
+    repeating-linear-gradient(-30deg, rgba(0, 187, 249, 0.06), rgba(0, 187, 249, 0.06) 2px, transparent 2px, transparent 28px);
+  --canvas-size: 100% 100%;
+  --overlay-fx: none;
+  --overlay-size: 100% 100%;
+}
+
+/* 10. COZY LO-FI / MATCHA GROVE (Bônus · Visual Novel Calmo p/ Escritas Longas) */
+[data-theme="cozy_grove"] {
+  color-scheme: dark;
+  --font-body: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-size-body: 15px;
+  --line-height-body: 1.38;
+  --radius: 8px;
+  --bg-app: #18221e;
+  --bg-card: #212f29;
+  --bg-hover: #2c3e36;
+  --fg-main: #ecf2ed;
+  --fg-soft: #b5c7ba;
+  --fg-muted: #7e9485;
+  --fg-on-accent: #141d19;
+  --border-subtle: #2c3d35;
+  --border-main: #3e574c;
+  --border-strong: #587a6b;
+  --acc-1: #95d5b2;
+  --acc-2: #f4a261;
+  --acc-3: #8ecae6;
+  --acc-magic: #cdb4db;
+  --acc-danger: #e76f51;
+  --tint-1: rgba(149, 213, 178, 0.16);
+  --tint-2: rgba(244, 162, 97, 0.16);
+  --tint-3: rgba(142, 202, 230, 0.16);
+  --tint-danger: rgba(231, 111, 81, 0.22);
+  --line-main: rgba(149, 213, 178, 0.48);
+  --line-alt: rgba(142, 202, 230, 0.7);
+  --line-magic: rgba(205, 180, 219, 0.55);
+  --card-shadow: 0 6px 18px rgba(9, 14, 12, 0.38);
+  --sel-shadow: 0 0 0 2px #95d5b2, 0 8px 22px rgba(149, 213, 178, 0.25);
+  --glow-text: none;
+  --canvas-bg: radial-gradient(rgba(149, 213, 178, 0.15) 1.2px, transparent 1.2px);
+  --canvas-size: 26px 26px;
+  --overlay-fx: none;
+  --overlay-size: 100% 100%;
+}
+
+/* ==========================================================================
+   MAPEAMENTO SEMÂNTICO GLOBAL DE CLASSES PARA VARIÁVEIS DO TEMA ATIVO
+   ========================================================================== */
+
+html, body {
+  margin: 0;
+  background-color: var(--bg-app) !important;
+  color: var(--fg-main) !important;
+  font-family: var(--font-body) !important;
+  font-size: var(--font-size-body) !important;
+  line-height: var(--line-height-body) !important;
+}
+
+* {
+  box-sizing: border-box;
+  border-radius: var(--radius);
+}
+
+.crt {
+  background-image: var(--overlay-fx);
+  background-size: var(--overlay-size);
+}
+
+.grid-bg {
+  background-color: var(--bg-app);
+  background-image: var(--canvas-bg);
+  background-size: var(--canvas-size);
+}
+
+.glow {
+  text-shadow: var(--glow-text);
+}
+
+select, input, textarea {
+  background-color: var(--bg-app);
+  color: var(--fg-main);
+}
+
+/* Superfícies e textos neutros */
+.bg-zinc-950 { background-color: var(--bg-app) !important; }
+.bg-zinc-900 { background-color: var(--bg-card) !important; }
+.hover\:bg-zinc-800:hover, .hover\:bg-zinc-900:hover { background-color: var(--bg-hover) !important; }
+.border-zinc-800, .border-zinc-800\/80 { border-color: var(--border-subtle) !important; }
+.border-zinc-700 { border-color: var(--border-main) !important; }
+.border-zinc-600 { border-color: var(--border-strong) !important; }
+.text-zinc-200, .text-zinc-300 { color: var(--fg-main) !important; }
+.text-zinc-400 { color: var(--fg-soft) !important; }
+.text-zinc-500, .text-zinc-600 { color: var(--fg-muted) !important; }
+.text-zinc-950, .\!text-zinc-950, .hover\:text-zinc-950:hover { color: var(--fg-on-accent) !important; }
+
+/* Acento 1 (Primário / Confiança / Raiz) */
+.text-emerald-400, .text-emerald-300, .text-emerald-200 { color: var(--acc-1) !important; }
+.border-emerald-500, .border-emerald-400 { border-color: var(--acc-1) !important; }
+.border-emerald-500\/40 { border-color: var(--line-main) !important; }
+.bg-emerald-400, .bg-emerald-500, .\!bg-emerald-400, .hover\:bg-emerald-400:hover {
+  background-color: var(--acc-1) !important;
+  color: var(--fg-on-accent) !important;
+}
+.bg-emerald-950\/40, .bg-emerald-950\/30 { background-color: var(--tint-1) !important; }
+
+/* Acento 2 (Secundário / Dúvida / Capítulos) */
+.text-amber-400, .text-amber-300, .\!text-amber-300 { color: var(--acc-2) !important; }
+.border-amber-500, .border-amber-400, .\!border-amber-500, .\!border-amber-400 { border-color: var(--acc-2) !important; }
+.bg-amber-400, .hover\:bg-amber-400:hover {
+  background-color: var(--acc-2) !important;
+  color: var(--fg-on-accent) !important;
+}
+.bg-amber-950\/40 { background-color: var(--tint-2) !important; }
+
+/* Acento 3 (Info / Confronto / Simulador) */
+.text-cyan-400, .text-cyan-300, .text-cyan-200, .\!text-cyan-300 { color: var(--acc-3) !important; }
+.border-cyan-500, .border-cyan-400, .border-cyan-900 { border-color: var(--acc-3) !important; }
+.border-cyan-400\/70, .border-cyan-500\/40 { border-color: var(--line-alt) !important; }
+.bg-cyan-400, .hover\:bg-cyan-400:hover {
+  background-color: var(--acc-3) !important;
+  color: var(--fg-on-accent) !important;
+}
+.bg-cyan-950, .bg-cyan-950\/40, .bg-cyan-950\/30 { background-color: var(--tint-3) !important; }
+
+/* Acento Mágico / Especial (Viés / Projeto) */
+.text-purple-400, .text-purple-300, .\!text-purple-300 { color: var(--acc-magic) !important; }
+.border-purple-500, .border-purple-400 { border-color: var(--acc-magic) !important; }
+.border-purple-500\/40 { border-color: var(--line-magic) !important; }
+.bg-purple-400, .hover\:bg-purple-400:hover {
+  background-color: var(--acc-magic) !important;
+  color: var(--fg-on-accent) !important;
+}
+
+/* Perigo / Pressão */
+.text-rose-500, .text-rose-400, .text-rose-300 { color: var(--acc-danger) !important; }
+.border-rose-500, .\!border-rose-500 { border-color: var(--acc-danger) !important; }
+.bg-rose-500, .\!bg-rose-500, .hover\:bg-rose-500:hover {
+  background-color: var(--acc-danger) !important;
+  color: var(--fg-on-accent) !important;
+}
+.bg-rose-950\/40, .bg-rose-950\/30, .bg-rose-950\/50 { background-color: var(--tint-danger) !important; }
+
+/* Sombras temáticas dos cartões */
+.dt-card-shadow { box-shadow: var(--card-shadow) !important; }
+.dt-sel-shadow { box-shadow: var(--sel-shadow) !important; }
